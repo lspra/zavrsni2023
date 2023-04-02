@@ -1,32 +1,38 @@
-naredbe završavaju znakom `;` ili `}`(ako postoji nezatvoren `{`) ili novim redom
+naredbe završavaju znakom `;` ili `}`(ako postoji nezatvoren `{`)
 
 ### komentari
-    // kroz jedan redak
-    // razmisliti o sintaksi za kroz više retka
+    # kroz jedan redak
+    # razmisliti o sintaksi za kroz više retka
 
 ### tipovi podataka
     bool
-    char(short short), short, int, long, long long
-    float, double(long float), long double(long long float)
+    int8, int16, int32, int64
+    uint8, uint16, uint32, uint64
+    float32, float64, float96
+    string
+
+#### stringovi
+- stringovi su 
 
 #### polja
 `lana = bool[]` definira polje boolova
-`lana = int[7]` definira polje intova veličine 7
+`lana = int32[7]` definira polje intova veličine 7
 `lana = {1, 2, 3, 4}` definira polje intova veličine 4 s navedenim vrijednostima
 `lana = float[n]` definira polje floatova veličine n
 - indeksiranje od 0
 - moguce operacije `[2:3]`, `[0:7:2]` itd kao u pythonu
 
 ### varijable
-zapocinju slovom ili znakom `_`, ne sadrže znakove `+, -, *, /, %, |, &...`, nisu rezervirane riječi (`and, or, xor, int...`)
+zapocinju slovom ili znakom `_` i slovom, ne sadrže znakove `+, -, *, /, %, |, &...`, nisu rezervirane riječi (`and, or, xor, int...`)
 moguca definicija bez navođenja tipa podatka, npr `lana = 3`, tada varijabla dobiva tip podatka koji joj se pridruži
 moguca definicija uz navođenje tipa podatka, npr `lana = int`
 nije moguca promjena tipa podatka neke varijable
 
-### definicja funkcije
+### funkcije
+#### definicija funkcije
     foo(a = int, b = bool) = double
     {
-        return 0.5
+        return 0.5;
     }
 
 funkcija `foo` prima integer i bool, a vraca double
@@ -38,16 +44,17 @@ funkcija `foo` prima integer i bool, a vraca double
 
 funkcija `foo2` prima int, a vraca void
 
-### poziv funkcije
+#### poziv funkcije
     foo(3, True)
 
 
-### definija klase
+### klase
+#### definija klase
     class Lana(Base1, Base2...)
     {
-        public_member1 = int
+        public_member1 = int;
         private:
-            private_member1 = float
+            private_member1 = float;
 
             private_method1(a = int)
             {
@@ -57,7 +64,7 @@ funkcija `foo2` prima int, a vraca void
         public:
             Lana(constructor_argument1=int)
             {
-                public_member1 = constructor_argument1
+                public_member1 = constructor_argument1;
             }
 
             Lana()
@@ -67,8 +74,8 @@ funkcija `foo2` prima int, a vraca void
     }
 
 
-### stvaranje objekata
-    lana_instance = Lana()
+#### stvaranje objekata
+    lana_instance = Lana();
     lana_instance.public_member1 = 7;
 
 ### operatori
@@ -81,9 +88,13 @@ Moguce je:
     x = 7 + (y = 5); // y = 5, x = 12
 
 #### Aritmetički
-        +, -, *, /, %
+##### Unarni
+    +, - 
+
+##### Binarni
+        +, -, *, /, % 
     
-#### Binarni
+#### Rad s bitovima
         |, ~, ^, &, >>, <<
 
 #### Usporedbe
@@ -92,9 +103,9 @@ Moguce je:
 #### Logički
         and, or, xor, not
 
-##### pre/post - increment/decrement/multiply/divide
+#### pre/post - increment/decrement/multiply/divide
 `++`, `+++`(uvecaj za 2), `++++`(uvecaj za 3) ...(nije preporuceno za brojeve vece od 3 zbog nejasnoce citanja jezika) - VIDI SINTAKSU ISPOD
-`++1`, `++2`, `++3`, `++n` (n cijeli(mozda realni - TODO) broj - NE VARIJABLA) - uvecaj za 1, 2, 3, n
+`++1`, `++2`, `++3`, `++n` (n realni broj - NE VARIJABLA) - uvecaj za 1, 2, 3, n
         
 isto vrijedi i za -, *, /, %, |, &, ^
 
@@ -117,7 +128,7 @@ Gornji kod je ekvivalentan:
     y = 3 + ++++++++x;
     print(x, y);
     
-###### increment za vrijednost varijable
+##### increment za vrijednost varijable
 prirodno se postavlja pitanje kako povećati vrijednost varijable x za vrijednost varijable y,
 tj. napraviti ono što bi se u većini programskih jezika napisalo naredbom `x+=y;`  
 
@@ -132,7 +143,21 @@ Naivan pristup rješavanju ovog problema, bio bi uvođenje sintakse: `x++y`, no 
 `(x)++y` označava da se mijenja vrijednost varijable y
 
 u ovakvoj sintaksi je moguce da se u zagradi pojavi bilo koji izraz, pa cak i `x++`, npr `x++(2+x-y)` sto omogucava sve funkcionalnosti operatora `+=` te dodaje nove
-                   
+
+#### prioritet operatora
+1. zagrade
+2. Unarni `+`, Unarni `-`, `~`
+3.  `<<`, `>>`
+4. `&`
+5. `|`, `^`
+6. `*`, `/`, `%`
+7. binarni `+`, `-`
+8. `&&`, `||`,  `^^`, `**`, `//`, `%%`, `++`, `--`, `=`
+9. `==`, `!=`, `<`, `<=`, `>`, `>=`
+10. `not`
+11. `and`
+12. `or`, `xor`
+
 ### if naredba
     if(uvjet) {
 
@@ -149,3 +174,9 @@ u ovakvoj sintaksi je moguce da se u zagradi pojavi bilo koji izraz, pa cak i `x
     while(uvjet) {
 
     }
+
+### ispis podataka
+    print(a, b, c)
+
+### unos podataka
+    input(a, b, c)
