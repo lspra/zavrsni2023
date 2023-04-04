@@ -18,6 +18,7 @@ Token *tokenizer::get_next_token()
     {
         if(state == STRING)
         {
+            //TODO add escaping
             while(cur_line[pos] != '"')
             {
                 t->value += cur_line[pos++];
@@ -27,30 +28,30 @@ Token *tokenizer::get_next_token()
             t->value += cur_line[pos];
             change_state(cur_line[pos++], t);
         }
-        if(white_space.count(cur_line[pos]))
+        if(white_space.contains(cur_line[pos]))
         {
             if(state != 0)
                 end_token(t);
             if(cur_line[pos] == '\n')
                 line++;
         }
-        else if(double_operators.count(cur_line[pos]))
+        else if(double_operators.contains(cur_line[pos]))
         {
             if(state != 0 && state != DOUBLE_OP)
                 end_token(t);
             else
                 change_state(cur_line[pos], t);
         }
-        else if(single_op.count(cur_line[pos]))
+        else if(single_op.contains(cur_line[pos]))
         {
             if(state != 0)
                 end_token(t);
             else
                 change_state(cur_line[pos], t);
         }
-        else if(op.count(cur_line[pos]))
+        else if(op.contains(cur_line[pos]))
         {
-            if(op_states.count(state) || state == 0)
+            if(op_states.contains(state) || state == 0)
                 change_state(cur_line[pos], t);
             else
                 end_token(t);
@@ -61,7 +62,6 @@ Token *tokenizer::get_next_token()
         if(t->line != 0)
             return t;
         t->value += cur_line[pos];
-        // std::cout << cur_line[pos] << " " << state << std::endl;
     }
     end_token(t);
     return t;
@@ -111,87 +111,59 @@ void tokenizer::change_state(char input, Token* t)
 {
     if(state == 0)
     {
-        try
-        {
+        if(transitions[state].contains(input))
             state = transitions[state].at(input);
-        }
-        catch(const std::out_of_range& e)
-        {
-            if(numbers.count(input))
-                state = INT;
-            else if(letters.count(input))
-                state = VARIABLE;
-            else
-                std::cerr << "error - continueing" << std::endl;
-        }
-        
+        else if(numbers.contains(input))
+            state = INT;
+        else if(letters.contains(input))
+            state = VARIABLE;
+        else
+            std::cerr << "error - continueing" << std::endl;
     }
-    else if(state == DOUBLE_OP)
-    {
-        if(input != t->value[t->value.length() - 1])
-            end_token(t);
-    }
-    else if(state == OP_END || state == STRING_END || state == BRACKET_CLOSE || state == BRACKET_OPEN || state == CURLY_CLOSE || state == CURLY_OPEN || state == CURLY_CLOSE || state == CURLY_OPEN)
-    {
+    else if(state == DOUBLE_OP && input != t->value[t->value.length() - 1])
         end_token(t);
-    }
-    else if(state == INT)
+    else if(state == OP_END || state == STRING_END || state == BRACKET_CLOSE || state == BRACKET_OPEN || state == CURLY_CLOSE || state == CURLY_OPEN || state == CURLY_CLOSE || state == CURLY_OPEN)
+        end_token(t);
+    else if(state == INT && !numbers.contains(input))
     {
-        if(!numbers.count(input))
-        {
-            try
-            {
-                state = transitions[state].at(input);
-            }
-            catch(const std::out_of_range& e)
-            {
-                end_token(t);
-            }
-        }
+        if(transitions[state].contains(input))
+            state = transitions[state].at(input);
+        else
+            end_token(t);
     }
     else if(state == FLOATING_POINT)
     {
-        if(numbers.count(input))
+        if(numbers.contains(input))
             state = FLOAT;
         else
             end_token(t);
     }
-    else if(state == FLOAT)
-    {
-        if(!numbers.count(input))
-            end_token(t);
-    }
+    else if(state == FLOAT && !numbers.contains(input))
+        end_token(t);
     else if(state == STRING)
     {
+        // TODO add escaping
         if(input == '"')
             state = STRING_END;
     }
     else if(state == 62)
     {
-        if(letters.count(input))
+        if(letters.contains(input))
             state = VARIABLE;
         else
             end_token(t);
     }
-    else if(op_states.count(state))
+    else if(op_states.contains(state))
     {
         if (transitions[state].contains(input))
             state = transitions[state].at(input);
         else
             end_token(t);
     }
+    else if(transitions[state].contains(input))
+        state = transitions[state].at(input);
+    else if(variable_char.contains(input))
+        state = VARIABLE;
     else
-    {
-        try
-        {
-            state = transitions[state].at(input);
-        }
-        catch(const std::out_of_range& e)
-        {
-            if(variable_char.count(input))
-                state = VARIABLE;
-            else
-                end_token(t);
-        }
-    }
+        end_token(t);
 }
