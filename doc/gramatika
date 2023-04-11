@@ -1,0 +1,40 @@
+`A` `->` `var` | `(exp)` | `const` | `var[exp]`
+`B` `->` `A` | `+A` | `-A` | `~A`
+`C` `->` `B << B` | `B >> B` | `B`
+`D` `->` `C & C` | `C`
+`E` `->` `D | D` | `D ^ D` | `D`
+`F` `->` `E * E` | `E / E` | `E % E` | `E`
+`G` `->` `F + F` | `F - F` | `F`
+`H` `->` `var operator_modify` | `operator_modify var` | 
+    `var operator_modify (exp)` | `(exp) operator_modify var` | 
+    `var operator_modify const` | `const operator_modify var` |
+    `var = exp` | `G`
+`I` `->` `H == H` | `H != H`| `H < H` | `H <= H` | `H > H` | `H >= H` | `H`
+`J` `->` `not I` | `I`
+`K` `->` `J and J` | `J`
+`exp` `->` `K or K` | `K xor K` | `K`
+`decl_command` `->` `var = exp;` | `var = data_type;` | `var = data_type[exp];` | `var = func_call` //ovo može značiti i kreiranje objekta, ovisno o specifieru
+`command` `->` `decl_command` | `if_commmand` | `;`
+`if_command` `->` `IF(exp) block_commands` | `IF(exp) block_commands ELSE block_commands`
+`commands` `->` `command commands` | `$`
+`block_commands` `->` `{commands}` | `command`
+`for_command` `->` `FOR(exp; exp; exp) block_commands`
+`while_command` `->` `WHILE(exp) block_commands`
+`command` `->` `for_command`
+`function_arguments` `->` `argument function_arguments` | `$`
+`argument` `->` `decl_command`
+`function` `->` `var(function_arguments) return_type block_commands`
+`return_type` -> `=data_type` | `$`
+`input_command` `->` `input(exp)`
+`print_command` `->` `print(exp)`
+`command` `->` `input_command` | `print_command` | `func_call`
+`func_call` `->` `var(argument_list)`
+`argument_list` `->` `var argument_list` | `$`
+`class_decl` `->` `class var base_classes {class_body}`
+`base_classes` `->` `(base_list)` | `$`
+`base_list` `->` `var base_list` | `var`
+`class_body` `->` `visibility_block class_body` | `visibility_block`
+`visibility_block` `->` `visibility_specifier decl_commands functions`
+`functions` `->` `function functions` | `$`
+`decl_commands` `->` `decl_command decl_commands` | `$`
+`visibility_specifier` `->` `public` | `private` | `$`

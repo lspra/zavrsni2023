@@ -1,4 +1,4 @@
-naredbe završavaju znakom `;` ili `}`(ako postoji nezatvoren `{`)
+naredbe završavaju znakom `;`
 
 ### komentari
     # kroz jedan redak
