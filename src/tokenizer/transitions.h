@@ -4,7 +4,6 @@
 #define TOTAL_TOKENIZER_STATES 67
 #define OP_LETTERS 78
 #define OP_END 80
-#define DOUBLE_OP 81
 #define COMMENT 82
 #define STRING_END 83
 #define INT 58
@@ -14,8 +13,8 @@
 
 std::unordered_map<char, int> const transitions[TOTAL_TOKENIZER_STATES] = {
     {{'i', 1}, {'u', 9}, {'b', 12}, {'f', 15}, {'s', 24}, {'w', 29}, {'n', 33}, {'a', 35}, {'o', 38}, {'x', 39}, {'c', 40}, {'p', 44}, {'e', 55}, 
-    {'"', STRING}, {'_', 62}, {'<', 64}, {'>', 65}, {'=', 66}, {'!', 66}, {'~', OP_END}, {':', OP_END}, {'+', DOUBLE_OP}, {'-', DOUBLE_OP}, 
-    {'*', DOUBLE_OP}, {'/', DOUBLE_OP}, {'%', DOUBLE_OP}, {'&', DOUBLE_OP}, {'|', DOUBLE_OP}, {'^', DOUBLE_OP}, {'#', COMMENT}, {':', COLON},
+    {'"', STRING}, {'_', 62}, {'<', 64}, {'>', 65}, {'=', 66}, {'!', 66}, {'~', OP_END}, {':', OP_END}, {'+', OPERATOR_MODIFY}, {'-', OPERATOR_MODIFY}, 
+    {'*', OPERATOR_MODIFY}, {'/', OPERATOR_MODIFY}, {'%', OPERATOR_MODIFY}, {'&', OPERATOR_MODIFY}, {'|', OPERATOR_MODIFY}, {'^', OPERATOR_MODIFY}, {'#', COMMENT}, {':', COLON},
     {'[', SQUARE_OPEN}, {']', SQUARE_CLOSE}, {'{', CURLY_OPEN}, {'}', CURLY_CLOSE}, {'(', BRACKET_OPEN}, {')', BRACKET_CLOSE}, {';', SEMICOLON}},
     {{'n', 2}, {'f', IF}},
     {{'t', 3}, {'p', 7}},

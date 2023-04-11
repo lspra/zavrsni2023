@@ -13,6 +13,7 @@ enum Token_Type
     PRIVATE,
     PRINT,
     ELSE,
+    OPERATOR_MODIFY = 81,
     SQUARE_OPEN = 84,
     SQUARE_CLOSE,
     CURLY_OPEN,

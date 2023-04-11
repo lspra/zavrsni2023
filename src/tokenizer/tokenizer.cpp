@@ -37,7 +37,7 @@ Token *tokenizer::get_next_token()
         }
         else if(double_operators.contains(cur_line[pos]))
         {
-            if(state != 0 && state != DOUBLE_OP)
+            if(state != 0 && state != OPERATOR_MODIFY)
                 end_token(t);
             else
                 change_state(cur_line[pos], t);
@@ -80,7 +80,6 @@ Token_Type tokenizer::get_token_type()
     switch (state)
     {
     case OP_END:
-    case DOUBLE_OP:
     case OP_LETTERS:
     case 64:
     case 65:
@@ -120,7 +119,7 @@ void tokenizer::change_state(char input, Token* t)
         else
             std::cerr << "error - continueing" << std::endl;
     }
-    else if(state == DOUBLE_OP && input != t->value[t->value.length() - 1])
+    else if(state == OPERATOR_MODIFY && input != t->value[t->value.length() - 1])
         end_token(t);
     else if(state == OP_END || state == STRING_END || state == BRACKET_CLOSE || state == BRACKET_OPEN || state == CURLY_CLOSE || state == CURLY_OPEN || state == CURLY_CLOSE || state == CURLY_OPEN)
         end_token(t);
