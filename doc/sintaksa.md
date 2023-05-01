@@ -52,7 +52,6 @@ funkcija `foo2` prima int, a vraca void
 #### definija klase
     class Lana(Base1, Base2...)
     {
-        public_member1 = int;
         private:
             private_member1 = float;
 
