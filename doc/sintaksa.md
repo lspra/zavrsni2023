@@ -44,6 +44,18 @@ funkcija `foo` prima integer i bool, a vraca double
 
 funkcija `foo2` prima int, a vraca void
 
+#### main funkcija
+main funckija nema return type
+mora biti zadnja funkcija u programu
+može imati argumente definirane kao i sve druge funkcije koji se onda pridružuju redom iz command linea
+
+    main(a = int)
+    {
+        // code
+    }
+
+kada bi se sada program pokrenuo s argumentom `7`, tada bi na početku izvođenja vrijednost varijable `a` bila `7`
+
 #### poziv funkcije
     foo(3, True)
 

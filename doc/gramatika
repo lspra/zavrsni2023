@@ -1,26 +1,32 @@
-<programm> -> <class_decl> <program> | <function> <program> | <main_function>
+<program> -> <program_parts> <main_function>
+<program_parts> -> <class_decl> <program_parts> | <function> <program_parts> | $
 <class_decl> -> class var <base_classes> {<class_body>}
 <base_classes> -> (<base_list>) | $
-<base_list> -> var, <base_list> | var
+<base_list> -> <base_list>, var | var
 <class_body> -> <visibility_block> <class_body> | <visibility_block>
-<visibility_block> -> <visibility_specifier> <program>
+<visibility_block> -> <visibility_specifier> <program_parts>
 <visibility_specifier> -> public | private
 <function> -> var (<function_arguments>) <return_type> <block_commands>
+<main_function> -> main (<function_arguments>) <block_commands>
 <return_type> -> =<data_type> | $
-<data_type> -> bool | int8 | int16 | int32 | int64 | uint8 | uint16 | uint32 | uint64 | float32 | float64 | float96 | string
-<function_arguments> -> <argument> <function_arguments> | $
+<data_type> -> bool | int8 | int16 | int32 | int64 | uint8 | uint16 | uint32 | uint64 | float32 | float64 | float96 | string | <data_type>[<exp>]
+<function_arguments> -> <argument>, <function_arguments> | <argument>
 <argument> -> <decl_command>
-<block_commands> -> {<commands>} | <command>
-<commands> -> <command> <commands> | $
-<command> -> <decl_command> | <if_commmand> | ; | <for_command> | <while_command> | <input_command> | <print_command> | <func_call>
-<decl_command> -> <Lvalue> = <exp>; | var = <data_type>; | var = <data_type>[<exp>]; | <Lvalue> = <func_call>;
-<if_command> -> IF(<exp>) <block_commands> | IF(<exp>) <block_commands> ELSE <block_commands>
-<for_command> -> FOR(<exp>; <exp>; <exp>) <block_commands>
-<while_command> -> WHILE(<exp>) <block_commands>
-<input_command> -> input(<exp>)
+<block_commands> -> {<commands>} | <command>;
+<commands> -> <command>; <commands> | $
+<command> -> <decl_command> | <if_commmand> | <for_command> | <while_command> | <input_command> | <print_command> | <func_call> | <set_command> | <return_command> | <loop_command>
+<loop_command> -> break | continue
+<return_command> -> return <exp> | return
+<decl_command> -> var = <data_type>
+<set_command> -> <Lvalue> = <exp> | <Lvalue> = <func_call> | $
+<if_command> -> if(<exp>) <block_commands> | if(<exp>) <block_commands> else <block_commands>
+<for_command> -> for(<set_command>; <exp>; <set_command>) <block_commands>
+<while_command> -> while(<exp>) <block_commands>
+<input_command> -> input(<Lvalue>)
 <print_command> -> print(<exp>)
-<func_call> -> var(<argument_list>)
-<argument_list> -> var, <argument_list> | var | $
+<func_call> -> var(<arguments>)
+<arguments> -> <argument_list> | $
+<argument_list> -> var, <argument_list> | var
 <exp> -> <K> or <K> | <K> xor <K> | <K>
 <K> -> <J> and <J> | <J>
 <J> -> not <I> | <I>
