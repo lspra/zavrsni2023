@@ -8,8 +8,7 @@
 <visibility_specifier> -> public | private
 <function> -> var (<function_arguments>) <return_type> <block_commands>
 <main_function> -> main (<function_arguments>) <block_commands>
-<return_type> -> =<data_type> | $
-<data_type> -> bool | int8 | int16 | int32 | int64 | uint8 | uint16 | uint32 | uint64 | float32 | float64 | float96 | string | <data_type>[<exp>]
+<return_type> -> =data_type | $
 <function_arguments> -> <argument>, <function_arguments> | <argument>
 <argument> -> <decl_command>
 <block_commands> -> {<commands>} | <command>;

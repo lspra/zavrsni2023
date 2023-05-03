@@ -1,8 +1,8 @@
 #include <string>
 #include <fstream>
 #include <iostream>
-#include "tokenizer.h"
-#include "transitions.h"
+#include <cctype>
+#include "tokenizer.hpp"
 
 tokenizer::~tokenizer()
 {
@@ -12,56 +12,117 @@ tokenizer::~tokenizer()
 Token *tokenizer::get_next_token()
 {
     Token *t = new Token();
-    if(pos >= cur_line.size())
+    bool string_escaping;
+    if (pos >= cur_line.size())
         readTokens();
-    for (; pos < cur_line.size(); pos++)
-    {
-        if(state == STRING)
+    for (; pos < cur_line.size(); pos++) {
+        switch (state)
         {
-            //TODO add escaping
-            while(cur_line[pos] != '"')
-            {
+        case s0:
+            if (isalpha(cur_line[pos])) {
+                state = word;
                 t->value += cur_line[pos++];
-                if(pos >= cur_line.size())
-                    readTokens();
+            } 
+            else if (isdigit(cur_line[pos])) {
+                state = number;
+                t->value += cur_line[pos++];
             }
-            t->value += cur_line[pos];
-            change_state(cur_line[pos++], t);
-        }
-        if(white_space.contains(cur_line[pos]))
-        {
-            if(state != 0)
+            else if (cur_line[pos] == '"') {
+                state = string;
+                string_escaping = false;
+                pos++;
+            }
+            else if (operator_modify.contains(cur_line[pos])) {
+                state = operator_repeating;
+                t->value += cur_line[pos++];
+            }
+            else if (cur_line[pos] == '#') {
+                // this is a comment, moving to next line
+                readTokens();
+            }
+            else if (cur_line[pos] == '<' || cur_line[pos] == '>') {
+                if (cur_line[pos + 1] == '=' || cur_line[pos + 1] == cur_line[pos]) {
+                    t->value = cur_line[pos] + cur_line[pos + 1];
+                    end_token(t);
+                    return t;
+                } else {
+                    t->value = cur_line[pos];
+                    end_token(t);
+                    return t;
+                }
+            }
+            else if (cur_line[pos] == '=' || cur_line[pos] == '!') {
+                if (cur_line[pos + 1] == '=') {
+                    t->value = cur_line[pos] + cur_line[pos + 1];
+                    end_token(t);
+                    return t;
+                } else {
+                    t->value = cur_line[pos];
+                    end_token(t);
+                    return t;
+                }
+            }
+            else if (cur_line[pos] == ' ' || cur_line[pos] == '\t' || cur_line[pos] == '\n')
+                continue;
+            else {
+                t->value += cur_line[pos++];
                 end_token(t);
-            if(cur_line[pos] == '\n')
-                line++;
-        }
-        else if(double_operators.contains(cur_line[pos]))
-        {
-            if(state != 0 && state != OPERATOR_MODIFY)
+                return t;
+            }
+            break;
+        case word:
+            if (isalnum(cur_line[pos])) 
+                t->value += cur_line[pos++];
+            else {
                 end_token(t);
-            else
-                change_state(cur_line[pos], t);
-        }
-        else if(single_op.contains(cur_line[pos]))
-        {
-            if(state != 0)
+                return t;
+            }
+            break;
+        case number:
+            if (isdigit(cur_line[pos]))
+                t->value += cur_line[pos++];
+            else if (cur_line[pos] == '.' || cur_line[pos] == ',') {
+                state = floating_numb;
+                t->value += cur_line[pos++];
+            }
+            else {
                 end_token(t);
-            else
-                change_state(cur_line[pos], t);
-        }
-        else if(op.contains(cur_line[pos]))
-        {
-            if(op_states.contains(state) || state == 0)
-                change_state(cur_line[pos], t);
-            else
+                return t;
+            }
+            break;
+        case floating_numb:
+            if (isdigit(cur_line[pos])) 
+                t->value += cur_line[pos++];
+            else {
                 end_token(t);
-        }
-        else
-            change_state(cur_line[pos], t);
-
-        if(t->line != 0)
-            return t;
-        t->value += cur_line[pos];
+                return t;
+            }
+            break;
+        case string:
+            if (string_escaping) {
+                if (cur_line[pos] == '"')
+                    t->value += cur_line[pos++];
+                else {
+                    t->value += '\\';
+                    t->value += cur_line[pos++];
+                }
+            } else {
+                if (cur_line[pos] == '"') {
+                    end_token(t);
+                    return t;
+                } else {
+                    t->value += cur_line[pos++];
+                }
+            }
+            break;
+        case operator_repeating:
+            if (t->value[0] == cur_line[pos])
+                t->value += cur_line[pos++];
+            else {
+                end_token(t);
+                return t;
+            }
+        } 
     }
     end_token(t);
     return t;
@@ -69,100 +130,61 @@ Token *tokenizer::get_next_token()
 
 void tokenizer::readTokens()
 {
-    file >> cur_line;
+    std::getline(file, cur_line);
+    line++;
     pos = 0;
 }
 
-Token_Type tokenizer::get_token_type()
+void tokenizer::set_token_type(Token* t)
 {
-    if(state <= 57)
-        return VARIABLE;
-    switch (state)
-    {
-    case OP_END:
-    case OP_LETTERS:
-    case 64:
-    case 65:
-    case 66:
-        return OPERATOR;
-    case STRING_END:
-    case 58:
-    case 60:
-        return CONST;
-    case 59:
-    case 61:
-    case 62:
-        std::cerr << "TODO add error";
-        return OPERATOR;
-    default:
-        return (Token_Type) state;
+    if (state == word) {
+        if (keywords.contains(t->value))
+            t->type = KEYWORD;
+        else if (t->value == "or" || t->value == "xor" ||
+                t->value == "not" || t->value == "and") 
+            t->type = OPERATOR;
+        else
+            t->type = VAR;
+    }
+    if (state == number || state == floating_numb || state == string)
+        t->type = CONST;
+    if (state == operator_repeating) {
+        if(t->value.length() == 1)
+            t->type == OPERATOR;
+        else
+            t->type = OPERATOR_MODIFY;
+    }
+    if (state == s0) {
+        if(operators.contains(t->value))
+            t->type = OPERATOR;
+        else if(t->value == "[")
+            t->type = SQUARE_OPEN;
+        else if(t->value == "]")
+            t->type = SQUARE_CLOSE;
+        else if(t->value == "{")
+            t->type = CURLY_OPEN;
+        else if(t->value == "}")
+            t->type = CURLY_CLOSE;
+        else if(t->value == "(")
+            t->type = BRACKET_OPEN;
+        else if(t->value == ")")
+            t->type = BRACKET_CLOSE;
+        else if(t->value == ";")
+            t->type = SEMICOLON;
+        else if(t->value == ":")
+            t->type = COLON;
+        else if(t->value == ",")
+            t->type = COMMA;
+        else {
+            std::cerr << "Error in line: " << line << " - following character is not an operator: " << t->value;
+            exit(1);
+        }
     }
 }
 
 void tokenizer::end_token(Token* t)
 {
-    t->type = get_token_type();
+    set_token_type(t);
     t->line = line;
-    state = 0;
-}
-
-void tokenizer::change_state(char input, Token* t)
-{
-    if(state == 0)
-    {
-        if(transitions[state].contains(input))
-            state = transitions[state].at(input);
-        else if(numbers.contains(input))
-            state = INT;
-        else if(letters.contains(input))
-            state = VARIABLE;
-        else
-            std::cerr << "error - continueing" << std::endl;
-    }
-    else if(state == OPERATOR_MODIFY && input != t->value[t->value.length() - 1])
-        end_token(t);
-    else if(state == OP_END || state == STRING_END || state == BRACKET_CLOSE || state == BRACKET_OPEN || state == CURLY_CLOSE || state == CURLY_OPEN || state == CURLY_CLOSE || state == CURLY_OPEN)
-        end_token(t);
-    else if(state == INT && !numbers.contains(input))
-    {
-        if(transitions[state].contains(input))
-            state = transitions[state].at(input);
-        else
-            end_token(t);
-    }
-    else if(state == FLOATING_POINT)
-    {
-        if(numbers.contains(input))
-            state = FLOAT;
-        else
-            end_token(t);
-    }
-    else if(state == FLOAT && !numbers.contains(input))
-        end_token(t);
-    else if(state == STRING)
-    {
-        // TODO add escaping
-        if(input == '"')
-            state = STRING_END;
-    }
-    else if(state == 62)
-    {
-        if(letters.contains(input))
-            state = VARIABLE;
-        else
-            end_token(t);
-    }
-    else if(op_states.contains(state))
-    {
-        if (transitions[state].contains(input))
-            state = transitions[state].at(input);
-        else
-            end_token(t);
-    }
-    else if(transitions[state].contains(input))
-        state = transitions[state].at(input);
-    else if(variable_char.contains(input))
-        state = VARIABLE;
-    else
-        end_token(t);
+    state = s0;
 }
