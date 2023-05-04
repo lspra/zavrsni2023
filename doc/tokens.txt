@@ -23,9 +23,10 @@ bool, int8, int16, int32, int64, uint8, uint16, uint32, uint64, float32, float64
 #
 
 varijable
-(_ | $)(qwertzuiopasdfghjklyxcvbnmQWERTZUIOPASDFGHJKLYXCVBNM)(qwertzuiopasdfghjklyxcvbnm1234567890_QWERTZUIOPASDFGHJKLYXCVBNM)*
+(qwertzuiopasdfghjklyxcvbnmQWER_TZUIOPASDFGHJKLYXCVBNM)(qwertzuiopasdfghjklyxcvbnm1234567890QWERTZUIOPASDFGHJKLYXCVBNM)*
 
 konstante
 (1234567890)+
 "(qwertzuiopasdfghjklyxcvbnm,.-1234567890'+QWERTZUIOPASDFGHJKLYXCVBNM)*"
 (1234567890)+.(1234567890)+
+123.456

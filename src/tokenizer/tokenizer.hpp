@@ -1,4 +1,35 @@
-#include"token.hpp"
+#include<fstream>
+#include<unordered_set>
+#include<string>
+
+enum Token_Type
+{
+    KEYWORD,
+    DATA_TYPE,
+    VAR,
+    INT,
+    FLOAT,
+    STRING,
+    OPERATOR_MODIFY,
+    OPERATOR,
+    SQUARE_OPEN,
+    SQUARE_CLOSE,
+    CURLY_OPEN,
+    CURLY_CLOSE,
+    BRACKET_OPEN,
+    BRACKET_CLOSE,
+    SEMICOLON,
+    COLON,
+    COMMA,
+    DOT
+};
+
+struct Token
+{
+    int line;
+    Token_Type type;
+    std::string value;
+};
 
 enum State {
     s0,
@@ -6,16 +37,17 @@ enum State {
     number,
     floating_numb,
     string,
-    operator_repeating
+    operator_repeating,
+    end_of_file
 };
 
 class tokenizer
 {
 private:
-    int line = 1;
-    int pos;
+    int line = 0;
+    int pos = 0;
     State state;
-    std::ifstream file;
+    std::fstream file;
     std::string cur_line;
     std::string filename;
     void readTokens();
