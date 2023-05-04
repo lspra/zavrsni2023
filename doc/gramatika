@@ -13,7 +13,8 @@
 <argument> -> <decl_command>
 <block_commands> -> {<commands>} | <command>;
 <commands> -> <command>; <commands> | $
-<command> -> <decl_command> | <if_commmand> | <for_command> | <while_command> | <input_command> | <print_command> | <func_call> | <set_command> | <return_command> | <loop_command>
+<command> -> <decl_command> | <if_commmand> | <for_command> | <while_command> | <input_command> | <print_command> | <func_call> | <set_command> | <return_command> | <loop_command> | <method_call>
+<method_call> -> var.var()
 <loop_command> -> break | continue
 <return_command> -> return <exp> | return
 <decl_command> -> var = <data_type>
