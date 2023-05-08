@@ -8,8 +8,9 @@
 <visibility_specifier> -> public | private
 <function> -> var (<function_arguments>) <return_type> <block_commands>
 <main_function> -> main (<function_arguments>) <block_commands>
+<function_arguments> -> <func_arguments_list> | $
 <return_type> -> =data_type | $
-<function_arguments> -> <decl_command>, <function_arguments> | <decl_command>
+<func_arguments_list> -> <decl_command>, <func_arguments_list> | <decl_command>
 <block_commands> -> {<commands>} | <command>
 <commands> -> <command> <commands> | $
 <command> -> <decl_command>; | <if_commmand> | <for_command> | <while_command> | <input_command>; | <print_command>; | <func_call>; | <set_command>; | <return_command>; | <loop_command>;
@@ -24,7 +25,7 @@
 <print_command> -> print(<exp>)
 <func_call> -> var(<arguments>) | var.var(<arguments>)
 <arguments> -> <argument_list> | $
-<argument_list> -> <Lvalue>, <argument_list> | <Lvalue>
+<argument_list> -> <exp>, <argument_list> | <epx>
 <exp> -> <K> or <K> | <K> xor <K> | <K>
 <K> -> <J> and <J> | <J>
 <J> -> not <I> | <I>
