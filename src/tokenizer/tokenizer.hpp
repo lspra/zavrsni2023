@@ -21,7 +21,8 @@ enum Token_Type
     SEMICOLON,
     COLON,
     COMMA,
-    DOT
+    DOT,
+    END_OF_FILE
 };
 
 struct Token

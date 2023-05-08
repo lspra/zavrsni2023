@@ -1,27 +1,38 @@
 #include <iostream>
 #include <stack>
-#include "./tokenizer/tokenizer.hpp"
+#include "lexer.hpp"
 
 std::stack<Token*> tokens;
+std::stack<Token*> temp_removed;
 
 void remove_stack_top(int index) {
-    for(int i = tokens.size() - index; i > 0; i--)
+    for(int i = tokens.size() - index; i > 0; i--) {
+        temp_removed.push(tokens.top());
         tokens.pop();
-    // this should also reset tokenizer, think about how that should be done
+    }
 }
 
 void get_token(tokenizer* t) {
-    tokens.push(t->get_next_token());
+    if(temp_removed.size() != 0) {
+        tokens.push(temp_removed.top());
+        temp_removed.pop();
+    } else {
+        Token* token = t->get_next_token();
+        tokens.push(token);
+    }
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 }
 
 void error_handle(std::string expected, int line) {
-    std::cerr << "Expected " << expected << " in line" << line << std::endl;
+    std::cerr << "Expected " << expected << " in line " << line << std::endl;
     exit(1);
 }
 
 // no part of this lex should be read before calling this function
 void base_list(tokenizer* t) {
+    std::cout << "base list"  << std::endl;
     get_token(t);
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type != VAR) 
         error_handle("base class name", tokens.top()->line);
     get_token(t);
@@ -33,7 +44,9 @@ void base_list(tokenizer* t) {
 
 // no part of this lex should be read before calling this function
 void base_classes(tokenizer *t) {
+    std::cout << "base classes"  << std::endl;
     get_token(t);
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type == CURLY_OPEN)
         return;
     if(tokens.top()->type != BRACKET_OPEN) 
@@ -46,19 +59,25 @@ void base_classes(tokenizer *t) {
 
 // no part of this lex should be read before calling this function
 void visibility_specifier(tokenizer* t) {
+    std::cout << "visibility specifier"  << std::endl;
     get_token(t);
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->value != "private" || tokens.top()->value != "public")
         error_handle("visibility specifier", tokens.top()->line);
 }
 
 // no part of this lex should be read before calling this function
 void visibility_block(tokenizer* t) {
+    std::cout << "visibility block"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     visibility_specifier(t);
     program_parts(t);
 }
 
 // no part of this lex should be read before calling this function
 void class_body(tokenizer* t) {
+    std::cout << "class body"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     visibility_block(t);
     get_token(t);
     if(tokens.top()->type != CURLY_CLOSE)
@@ -67,7 +86,9 @@ void class_body(tokenizer* t) {
 
 // keyword class should be read and saved in token before calling this function
 void class_decl(tokenizer* t) {
+    std::cout << "class decl"  << std::endl;
     get_token(t);
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type != VAR) 
         error_handle("class name", tokens.top()->line);
     base_classes(t);
@@ -82,6 +103,8 @@ void class_decl(tokenizer* t) {
 
 // first part of this lex should be read before calling this function
 int decl_command(tokenizer* t) {
+    std::cout << "decl command"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type != VAR)
         return -1;
     get_token(t);
@@ -90,23 +113,36 @@ int decl_command(tokenizer* t) {
     get_token(t);
     if(tokens.top()->type != DATA_TYPE)
         return -1;
+    return 0;
 }
 
 // no part of this lex should be read before calling this function
-void function_arguments(tokenizer* t) {
+void func_arguments_list(tokenizer* t) {
+    std::cout << "func arguments list"  << std::endl;
     get_token(t);
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(decl_command(t) == -1)
         error_handle("declaration command", tokens.top()->line);
     get_token(t);
     if(tokens.top()->type == COMMA)
-        function_arguments(t);
+        func_arguments_list(t);
     if(tokens.top()->type != BRACKET_CLOSE)
         error_handle(")", tokens.top()->line);
 }
 
-// no part of this lex should be read before calling this function
-void return_type(tokenizer* t) {
+void function_arguments(tokenizer* t) {
     get_token(t);
+    if(tokens.top()->type == VAR) {
+        func_arguments_list(t);
+    }
+    if(tokens.top()->type != BRACKET_CLOSE)
+        error_handle(")", tokens.top()->line);
+}
+
+// first part of this lex should be read before calling this function
+void return_type(tokenizer* t) {
+    std::cout << "return type"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->value != "=")
         return;
     get_token(t);
@@ -115,6 +151,8 @@ void return_type(tokenizer* t) {
 }
 
 void Lvalue(tokenizer* t) {
+    std::cout << "Lvalue"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type != VAR)
         error_handle("Lvalue", tokens.top()->line);
     get_token(t);
@@ -126,6 +164,8 @@ void Lvalue(tokenizer* t) {
 }
 
 void A(tokenizer* t) {
+    std::cout << "A"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type == VAR)
         Lvalue(t);
     else if(tokens.top()->type == BRACKET_OPEN) {
@@ -133,22 +173,26 @@ void A(tokenizer* t) {
         get_token(t);
         if(tokens.top()->type != BRACKET_CLOSE) 
             error_handle(")", tokens.top()->line);
+        get_token(t);
     } else if(tokens.top()->type == INT || tokens.top()->type == FLOAT || tokens.top()->type == STRING) {
-
+        get_token(t);
     } else {
         error_handle("expression", tokens.top()->line);
     }
 }
 
 void B(tokenizer* t) {
+    std::cout << "B"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->value == "+" || tokens.top()->value == "-" || tokens.top()->value == "~")
         get_token(t);
     A(t);
 }
 
 void C(tokenizer* t) {
+    std::cout << "C"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     B(t);
-    get_token(t);
     if(tokens.top()->value == "<<" || tokens.top()->value == ">>") {
         get_token(t);
         B(t);
@@ -156,8 +200,9 @@ void C(tokenizer* t) {
 }
 
 void D(tokenizer* t) {
+    std::cout << "D"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     C(t);
-    get_token(t);
     if(tokens.top()->value == "&") {
         get_token(t);
         C(t);
@@ -165,8 +210,9 @@ void D(tokenizer* t) {
 }
 
 void E(tokenizer* t) {
+    std::cout << "E"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     D(t);
-    get_token(t);
     if(tokens.top()->value == "|" || tokens.top()->value == "^") {
         get_token(t);
         D(t);
@@ -174,8 +220,9 @@ void E(tokenizer* t) {
 }
 
 void F(tokenizer* t) {
+    std::cout << "F"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     E(t);
-    get_token(t);
     if(tokens.top()->value == "*" || tokens.top()->value == "/" || tokens.top()->value == "%") {
         get_token(t);
         E(t);
@@ -183,8 +230,9 @@ void F(tokenizer* t) {
 }
 
 void G(tokenizer* t) {
+    std::cout << "G"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     F(t);
-    get_token(t);
     if(tokens.top()->value == "+" || tokens.top()->value == "-") {
         get_token(t);
         F(t);
@@ -192,6 +240,8 @@ void G(tokenizer* t) {
 }
 
 void H(tokenizer* t) {
+    std::cout << "H"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type == OPERATOR_MODIFY) {
         Lvalue(t);
     }
@@ -244,21 +294,27 @@ void H(tokenizer* t) {
 
 
 void I(tokenizer* t) {
+    std::cout << "I"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     H(t);
-    get_token(t);
-    if (tokens.top()->value == "==" || tokens.top()->value == "!=" || tokens.top()->value == "<" || tokens.top()->value == "<=" || tokens.top()->value == ">" || ">=") {
+    if (tokens.top()->value == "==" || tokens.top()->value == "!=" || tokens.top()->value == "<" ||
+         tokens.top()->value == "<=" || tokens.top()->value == ">" || tokens.top()->value == ">=") {
         get_token(t);
         H(t);
     }
 }
 
 void J(tokenizer* t) {
+    std::cout << "J"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->value == "not")
         get_token(t);
     I(t);
 }
 
 void K(tokenizer* t) {
+    std::cout << "K"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     J(t);
     get_token(t);
     if(tokens.top()->value == "and") {
@@ -268,6 +324,9 @@ void K(tokenizer* t) {
 }
 
 void exp(tokenizer* t) {
+    std::cout << "exp"  << std::endl;
+    get_token(t);
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     K(t);
     get_token(t);
     if(tokens.top()->value == "or" || tokens.top()->value == "xor") {
@@ -277,7 +336,9 @@ void exp(tokenizer* t) {
 }
 
 void argument_list(tokenizer* t) {
-    Lvalue(t);
+    std::cout << "argument list"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
+    exp(t);
     get_token(t);
     if(tokens.top()->type == COMMA) {
         get_token(t);
@@ -289,7 +350,9 @@ void argument_list(tokenizer* t) {
 }
 
 void arguments(tokenizer* t) {
+    std::cout << "arguments"  << std::endl;
     get_token(t);
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type == VAR) {
         argument_list(t);
     }
@@ -298,7 +361,9 @@ void arguments(tokenizer* t) {
 }
 
 void func_call(tokenizer* t) {
+    std::cout << "function command"  << std::endl;
     get_token(t);
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type == DOT) {
         get_token(t);
         if(tokens.top()->type != VAR)
@@ -322,6 +387,8 @@ void func_call(tokenizer* t) {
 // returns -1 if what the function is parsing is not set_command
 // error handling should be done after calling the function
 int set_command(tokenizer* t) {
+    std::cout << "set command"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     Lvalue(t);
     if(tokens.top()->value != "=") 
         return -1;
@@ -336,7 +403,9 @@ int set_command(tokenizer* t) {
 }
 
 void if_command(tokenizer* t) {
+    std::cout << "if command"  << std::endl;
     get_token(t);
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type != BRACKET_OPEN)
         error_handle("(", tokens.top()->line);
     get_token(t);
@@ -351,7 +420,9 @@ void if_command(tokenizer* t) {
 }
 
 void for_command(tokenizer* t) {
+    std::cout << "for command"  << std::endl;
     get_token(t);
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type != BRACKET_OPEN)
         error_handle("(", tokens.top()->line);
     if(set_command(t) == -1)
@@ -367,7 +438,9 @@ void for_command(tokenizer* t) {
 }
 
 void while_command(tokenizer* t) {
+    std::cout << "while command"  << std::endl;
     get_token(t);
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type != BRACKET_OPEN)
         error_handle("(", tokens.top()->line);
     get_token(t);
@@ -379,26 +452,33 @@ void while_command(tokenizer* t) {
 }
 
 void input_command(tokenizer* t) {
+    std::cout << "input command"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
+    get_token(t);
     if(tokens.top()->type != BRACKET_OPEN)
         error_handle("(", tokens.top()->line);
-    Lvalue(t);
     get_token(t);
+    Lvalue(t);
     if(tokens.top()->type != BRACKET_CLOSE)
         error_handle(")", tokens.top()->line);
 }
 
 void print_command(tokenizer* t) {
+    std::cout << "print command"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
+    get_token(t);
     if(tokens.top()->type != BRACKET_OPEN)
         error_handle("(", tokens.top()->line);
     get_token(t);
     exp(t);
-    get_token(t);
     if(tokens.top()->type != BRACKET_CLOSE)
         error_handle(")", tokens.top()->line);
 }
 
 void return_command(tokenizer* t) {
+    std::cout << "return command"  << std::endl;
     get_token(t);
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type != SEMICOLON) {
         exp(t);
         get_token(t);
@@ -411,6 +491,8 @@ void loop_command(tokenizer* t) {
 
 // first part of this lex should be read before calling this function
 void command(tokenizer* t) {
+    std::cout << "command"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->value == "if")
         if_command(t);
     else if(tokens.top()->value == "for") {
@@ -450,6 +532,8 @@ void command(tokenizer* t) {
 
 // first part of this lex should be read before calling this function
 void commands(tokenizer* t) {
+    std::cout << "commands"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type == CURLY_CLOSE)
         return;
     command(t);
@@ -458,7 +542,9 @@ void commands(tokenizer* t) {
 
 // no part of this lex should be read before calling this function
 void block_commands(tokenizer* t) {
+    std::cout << "block commands"  << std::endl;
     get_token(t);
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type == CURLY_OPEN) {
         get_token(t);
         commands(t);
@@ -473,7 +559,9 @@ void block_commands(tokenizer* t) {
 
 // function name should be read and saved in token before calling this function
 void function(tokenizer* t) {
+    std::cout << "function"  << std::endl;
     get_token(t);
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type != BRACKET_OPEN)
         error_handle("(", tokens.top()->line);
     function_arguments(t);
@@ -485,7 +573,9 @@ void function(tokenizer* t) {
 
 // no part of this lex should be read before calling this function
 void program_parts(tokenizer* t) {
+    std::cout << "program parts"  << std::endl;
     get_token(t);
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type == KEYWORD && tokens.top()->value == "main")
         return;
     if(tokens.top()->type == KEYWORD && tokens.top()->value == "class")
@@ -496,7 +586,9 @@ void program_parts(tokenizer* t) {
 
 // keyword main should be read and saved in token before calling this function
 void main_function(tokenizer* t) {
+    std::cout << "main function"  << std::endl;
     get_token(t);
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type != BRACKET_OPEN) 
         error_handle("(", tokens.top()->line);
     function_arguments(t);
@@ -507,6 +599,7 @@ void main_function(tokenizer* t) {
 
 // no part of this lex should be read before calling this function
 void program(tokenizer* t) {
+    std::cout << "program"  << std::endl;
     program_parts(t);
     main_function(t);
 }

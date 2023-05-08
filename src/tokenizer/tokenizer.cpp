@@ -30,8 +30,10 @@ Token *tokenizer::get_next_token()
     bool string_escaping;
     if (pos >= cur_line.size())
         readTokens();
-    if(state == end_of_file)
+    if(state == end_of_file) {
+        end_token(t);
         return t;
+    }
     for (; pos < cur_line.size(); pos++) {
         switch (state)
         {
@@ -174,6 +176,8 @@ void tokenizer::set_token_type(Token* t)
         else
             t->type = VAR;
     }
+    if(state == end_of_file)
+        t->type == END_OF_FILE;
     if (state == number)
         t->type = INT;
     if(state == floating_numb)
@@ -220,5 +224,6 @@ void tokenizer::end_token(Token* t)
 {
     set_token_type(t);
     t->line = line;
-    state = s0;
+    if(state != end_of_file)
+        state = s0;
 }
