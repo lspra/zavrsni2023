@@ -20,25 +20,26 @@
 <set_command> -> <Lvalue> = <exp> | <Lvalue> = <func_call> | $
 <if_command> -> if(<exp>) <block_commands> | if(<exp>) <block_commands> else <block_commands>
 <for_command> -> for(<set_command>; <exp>; <set_command>) <block_commands>
+<for_command> -> for(<decl_command>; <exp>; <set_command>) <block_commands>
 <while_command> -> while(<exp>) <block_commands>
 <input_command> -> input(<Lvalue>)
 <print_command> -> print(<exp>)
 <func_call> -> var(<arguments>) | var.var(<arguments>)
 <arguments> -> <argument_list> | $
 <argument_list> -> <exp>, <argument_list> | <epx>
-<exp> -> <K> or <K> | <K> xor <K> | <K>
-<K> -> <J> and <J> | <J>
+<exp> -> <K> or <exp> | <K> xor <exp> | <K>
+<K> -> <J> and <K> | <J>
 <J> -> not <I> | <I>
 <I> -> <H> == <H> | <H> != <H>| <H> < <H> | <H> <= <H> | <H> > <H> | <H> >= <H> | <H>
 <H> -> <Lvalue> operator_modify | operator_modify <Lvalue> | 
     <Lvalue> operator_modify (<exp>) | (<exp>) operator_modify <Lvalue> | 
     <Lvalue> operator_modify const | const operator_modify <Lvalue> |
     <Lvalue> = <exp> | <G>
-<G> -> <F> + <F> | <F> - <F> | <F>
-<F> -> <E> * <E> | <E> / <E> | <E> % <E> | <E>
-<E> -> <D> '|' <D> | <D> ^ <D> | <D>
-<D> -> <C> & <C> | <C>
-<C> -> <B> << <B> | <B> >> <B> | <B>
+<G> -> <F> + <G> | <F> - <G> | <F>
+<F> -> <E> * <F> | <E> / <F> | <E> % <F> | <E>
+<E> -> <D> '|' <E> | <D> ^ <E> | <D>
+<D> -> <C> & <D> | <C>
+<C> -> <B> << <C> | <B> >> <C> | <B>
 <B> -> <A> | +<A> | -<A> | ~<A>
-<A> -> <Lvalue> | (<exp>) | const
+<A> -> <Lvalue> | (<exp>) | const | <func_call>
 <Lvalue> -> var | var[<exp>]

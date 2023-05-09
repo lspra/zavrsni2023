@@ -169,8 +169,8 @@ void A(tokenizer* t) {
     if(tokens.top()->type == VAR)
         Lvalue(t);
     else if(tokens.top()->type == BRACKET_OPEN) {
-        exp(t);
         get_token(t);
+        exp(t);
         if(tokens.top()->type != BRACKET_CLOSE) 
             error_handle(")", tokens.top()->line);
         get_token(t);
@@ -195,7 +195,7 @@ void C(tokenizer* t) {
     B(t);
     if(tokens.top()->value == "<<" || tokens.top()->value == ">>") {
         get_token(t);
-        B(t);
+        C(t);
     }
 }
 
@@ -205,7 +205,7 @@ void D(tokenizer* t) {
     C(t);
     if(tokens.top()->value == "&") {
         get_token(t);
-        C(t);
+        D(t);
     }
 }
 
@@ -215,7 +215,7 @@ void E(tokenizer* t) {
     D(t);
     if(tokens.top()->value == "|" || tokens.top()->value == "^") {
         get_token(t);
-        D(t);
+        E(t);
     }
 }
 
@@ -225,7 +225,7 @@ void F(tokenizer* t) {
     E(t);
     if(tokens.top()->value == "*" || tokens.top()->value == "/" || tokens.top()->value == "%") {
         get_token(t);
-        E(t);
+        F(t);
     }
 }
 
@@ -235,7 +235,7 @@ void G(tokenizer* t) {
     F(t);
     if(tokens.top()->value == "+" || tokens.top()->value == "-") {
         get_token(t);
-        F(t);
+        G(t);
     }
 }
 
@@ -253,7 +253,6 @@ void H(tokenizer* t) {
             get_token(t);
             if(tokens.top()->type == BRACKET_OPEN) {
                 exp(t);
-                get_token(t);
                 if(tokens.top()->type != BRACKET_CLOSE)
                     error_handle(")", tokens.top()->line);
                 get_token(t);
@@ -316,22 +315,19 @@ void K(tokenizer* t) {
     std::cout << "K"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     J(t);
-    get_token(t);
     if(tokens.top()->value == "and") {
         get_token(t);
-        J(t);
+        K(t);
     }
 }
 
 void exp(tokenizer* t) {
     std::cout << "exp"  << std::endl;
-    get_token(t);
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     K(t);
-    get_token(t);
     if(tokens.top()->value == "or" || tokens.top()->value == "xor") {
         get_token(t);
-        K(t);
+        exp(t);
     }
 }
 
@@ -360,10 +356,14 @@ void arguments(tokenizer* t) {
         error_handle(")", tokens.top()->line);
 }
 
-void func_call(tokenizer* t) {
-    std::cout << "function command"  << std::endl;
-    get_token(t);
+// returns -1 if what the function is parsing is not set_command
+// error handling should be done after calling the function
+int func_call(tokenizer* t) {
+    std::cout << "function call"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
+    if(tokens.top()->type != VAR)
+        return -1;
+    get_token(t);
     if(tokens.top()->type == DOT) {
         get_token(t);
         if(tokens.top()->type != VAR)
@@ -377,11 +377,11 @@ void func_call(tokenizer* t) {
     }
     get_token(t);
     if(tokens.top()->type != BRACKET_OPEN)
-        error_handle("(", tokens.top()->line);
+        return -1;
     arguments(t);
     if(tokens.top()->type != BRACKET_CLOSE)
-        error_handle(")", tokens.top()->line);
-
+        return -1;
+    return 0;
 }
 
 // returns -1 if what the function is parsing is not set_command
@@ -389,6 +389,8 @@ void func_call(tokenizer* t) {
 int set_command(tokenizer* t) {
     std::cout << "set command"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
+    if(tokens.top()->type == SEMICOLON)
+        return 0;
     Lvalue(t);
     if(tokens.top()->value != "=") 
         return -1;
@@ -397,8 +399,12 @@ int set_command(tokenizer* t) {
     exp(t);
     if(tokens.top()->type != SEMICOLON && tokens.top()->type != BRACKET_CLOSE) {
         remove_stack_top(stack_top);
-        func_call(t);
+        if(func_call(t) == -1) {
+            remove_stack_top(stack_top);
+            return -1;
+        }
     }
+    get_token(t);
     return 0;
 }
 
@@ -425,10 +431,19 @@ void for_command(tokenizer* t) {
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type != BRACKET_OPEN)
         error_handle("(", tokens.top()->line);
-    if(set_command(t) == -1)
-        error_handle("command", tokens.top()->line);
+    get_token(t);
+    int stack_top = tokens.size();
+    if(set_command(t) == -1) {
+        remove_stack_top(stack_top);
+        if(decl_command(t) == -1)
+            error_handle("command", tokens.top()->line);
+    }
+    get_token(t);
+    if(tokens.top()->type != SEMICOLON)
+        error_handle(";", tokens.top()->line);
     get_token(t);
     exp(t);
+    get_token(t);
     if(set_command(t) == -1)
         error_handle("command", tokens.top()->line);
     get_token(t);
