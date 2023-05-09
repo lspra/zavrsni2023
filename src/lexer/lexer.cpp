@@ -157,184 +157,167 @@ void Lvalue(tokenizer* t) {
         error_handle("Lvalue", tokens.top()->line);
     get_token(t);
     if(tokens.top()->type == SQUARE_OPEN) {
-        exp(t);
+        if(exp(t) == -1)
+            error_handle("expression", tokens.top()->line);
         if(tokens.top()->type != SQUARE_CLOSE)
             error_handle("]", tokens.top()->type);
     }
 }
 
-void A(tokenizer* t) {
+int A(tokenizer* t) {
     std::cout << "A"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-    if(tokens.top()->type == VAR)
-        Lvalue(t);
-    else if(tokens.top()->type == BRACKET_OPEN) {
+    if(tokens.top()->type == VAR) {
+        int stack_top = tokens.size();
+        if(func_call(t) == -1) {
+            remove_stack_top(stack_top);
+            Lvalue(t);
+        }
+    } else if(tokens.top()->type == BRACKET_OPEN) {
         get_token(t);
-        exp(t);
+        if(exp(t) == -1)
+            return -1;
         if(tokens.top()->type != BRACKET_CLOSE) 
             error_handle(")", tokens.top()->line);
         get_token(t);
     } else if(tokens.top()->type == INT || tokens.top()->type == FLOAT || tokens.top()->type == STRING) {
         get_token(t);
     } else {
-        error_handle("expression", tokens.top()->line);
+        return -1;
     }
+    return 0;
 }
 
-void B(tokenizer* t) {
+int B(tokenizer* t) {
     std::cout << "B"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->value == "+" || tokens.top()->value == "-" || tokens.top()->value == "~")
         get_token(t);
-    A(t);
+    return A(t);
 }
 
-void C(tokenizer* t) {
+int C(tokenizer* t) {
     std::cout << "C"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-    B(t);
+    if(B(t) == -1)
+        return -1;
     if(tokens.top()->value == "<<" || tokens.top()->value == ">>") {
         get_token(t);
-        C(t);
+        return C(t);
     }
+    return 0;
 }
 
-void D(tokenizer* t) {
+int D(tokenizer* t) {
     std::cout << "D"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-    C(t);
+    if(C(t) == -1)
+        return -1;
     if(tokens.top()->value == "&") {
         get_token(t);
-        D(t);
+        return D(t);
     }
+    return 0;
 }
 
-void E(tokenizer* t) {
+int E(tokenizer* t) {
     std::cout << "E"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-    D(t);
+    if(D(t) == -1)
+        return -1;
     if(tokens.top()->value == "|" || tokens.top()->value == "^") {
         get_token(t);
-        E(t);
+        return E(t);
     }
+    return 0;
 }
 
-void F(tokenizer* t) {
+int F(tokenizer* t) {
     std::cout << "F"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-    E(t);
+    if(E(t) == -1)
+        return -1;
     if(tokens.top()->value == "*" || tokens.top()->value == "/" || tokens.top()->value == "%") {
         get_token(t);
-        F(t);
+        return F(t);
     }
+    return 0;
 }
 
-void G(tokenizer* t) {
+int G(tokenizer* t) {
     std::cout << "G"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-    F(t);
+    if(F(t) == -1)
+        return -1;
     if(tokens.top()->value == "+" || tokens.top()->value == "-") {
         get_token(t);
-        G(t);
+        return G(t);
     }
+    return 0;
 }
 
-void H(tokenizer* t) {
+int H(tokenizer* t) {
     std::cout << "H"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-    if(tokens.top()->type == OPERATOR_MODIFY) {
-        Lvalue(t);
-    }
     int stack_top = tokens.size();
-    if(tokens.top()->type == VAR) {
-        Lvalue(t);
-        get_token(t);
-        if(tokens.top()->type == OPERATOR_MODIFY) {
-            get_token(t);
-            if(tokens.top()->type == BRACKET_OPEN) {
-                exp(t);
-                if(tokens.top()->type != BRACKET_CLOSE)
-                    error_handle(")", tokens.top()->line);
-                get_token(t);
-            } else if(tokens.top()->type == INT || tokens.top()->type == FLOAT) {
-                get_token(t);
-            }
-        } else if(tokens.top()->value == "=") {
-            exp(t);
-        } else {
-            remove_stack_top(stack_top);
-            G(t);
-        }
-    } else if(tokens.top()->type == BRACKET_OPEN) {
-        get_token(t);
-        exp(t);
-        get_token(t);
-        if(tokens.top()->type != BRACKET_CLOSE)
-            error_handle(")", tokens.top()->line);
-        get_token(t);
-        if(tokens.top()->type == OPERATOR_MODIFY) {
-            get_token(t);
-            Lvalue(t);
-        } else {
-            remove_stack_top(stack_top);
-            G(t);
-        }
-    } else if(tokens.top()->type == INT || tokens.top()->type == FLOAT) {
-        get_token(t);
-        if(tokens.top()->type == OPERATOR_MODIFY) {
-            get_token(t);
-            Lvalue(t);
-        } else {
-            remove_stack_top(stack_top);
-            G(t);
-        }
+    if(set_command(t) == -1) {
+        remove_stack_top(stack_top);
+        return G(t);
     }
+    return 0;
 }
 
 
-void I(tokenizer* t) {
+int I(tokenizer* t) {
     std::cout << "I"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-    H(t);
+    if(H(t) == -1)
+        return -1;
     if (tokens.top()->value == "==" || tokens.top()->value == "!=" || tokens.top()->value == "<" ||
          tokens.top()->value == "<=" || tokens.top()->value == ">" || tokens.top()->value == ">=") {
         get_token(t);
-        H(t);
+        return H(t);
     }
+    return 0;
 }
 
-void J(tokenizer* t) {
+int J(tokenizer* t) {
     std::cout << "J"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->value == "not")
         get_token(t);
-    I(t);
+    return I(t);
 }
 
-void K(tokenizer* t) {
+int K(tokenizer* t) {
     std::cout << "K"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-    J(t);
+    if(J(t) == -1)
+        return -1;
     if(tokens.top()->value == "and") {
         get_token(t);
-        K(t);
+        return K(t);
     }
+    return 0;
 }
 
-void exp(tokenizer* t) {
+int exp(tokenizer* t) {
     std::cout << "exp"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-    K(t);
+    if(K(t) == -1)
+        return -1;
     if(tokens.top()->value == "or" || tokens.top()->value == "xor") {
         get_token(t);
-        exp(t);
+        return exp(t);
     }
+    return 0;
 }
 
 void argument_list(tokenizer* t) {
     std::cout << "argument list"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-    exp(t);
+    if(exp(t) == -1)
+        error_handle("expression", tokens.top()->line);
     get_token(t);
     if(tokens.top()->type == COMMA) {
         get_token(t);
@@ -374,8 +357,8 @@ int func_call(tokenizer* t) {
         arguments(t);
         if(tokens.top()->type != BRACKET_CLOSE)
             error_handle(")", tokens.top()->line);
+        get_token(t);
     }
-    get_token(t);
     if(tokens.top()->type != BRACKET_OPEN)
         return -1;
     arguments(t);
@@ -389,22 +372,55 @@ int func_call(tokenizer* t) {
 int set_command(tokenizer* t) {
     std::cout << "set command"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-    if(tokens.top()->type == SEMICOLON)
-        return 0;
-    Lvalue(t);
-    if(tokens.top()->value != "=") 
-        return -1;
-    get_token(t);
+    if(tokens.top()->type == OPERATOR_MODIFY) {
+        Lvalue(t);
+    }
     int stack_top = tokens.size();
-    exp(t);
-    if(tokens.top()->type != SEMICOLON && tokens.top()->type != BRACKET_CLOSE) {
-        remove_stack_top(stack_top);
-        if(func_call(t) == -1) {
-            remove_stack_top(stack_top);
+    if(tokens.top()->type == VAR) {
+        Lvalue(t);
+        if(tokens.top()->type == OPERATOR_MODIFY) {
+            get_token(t);
+            if(tokens.top()->type == BRACKET_OPEN) {
+                get_token(t);
+                if(exp(t) == -1)
+                    error_handle("expression", tokens.top()->line);
+                if(tokens.top()->type != BRACKET_CLOSE)
+                    error_handle(")", tokens.top()->line);
+                get_token(t);
+            } else if(tokens.top()->type == INT || tokens.top()->type == FLOAT) {
+                get_token(t);
+            }
+        } else if(tokens.top()->value == "=") {
+            get_token(t);
+            if(exp(t) == -1)
+                return -1;
+        } else {
             return -1;
         }
+    } else if(tokens.top()->type == BRACKET_OPEN) {
+        get_token(t);
+        if(exp(t) == -1)
+            return -1;
+        get_token(t);
+        if(tokens.top()->type != BRACKET_CLOSE)
+            return -1;
+        get_token(t);
+        if(tokens.top()->type == OPERATOR_MODIFY) {
+            get_token(t);
+            Lvalue(t);
+        } else
+            return -1;
+    } else if(tokens.top()->type == INT || tokens.top()->type == FLOAT) {
+        get_token(t);
+        if(tokens.top()->type == OPERATOR_MODIFY) {
+            get_token(t);
+            Lvalue(t);
+        } else {
+            return -1;
+        }
+    } else {
+        return -1;
     }
-    get_token(t);
     return 0;
 }
 
@@ -415,7 +431,8 @@ void if_command(tokenizer* t) {
     if(tokens.top()->type != BRACKET_OPEN)
         error_handle("(", tokens.top()->line);
     get_token(t);
-    exp(t);
+    if(exp(t) == -1)
+        error_handle("expression", tokens.top()->line);
     get_token(t);
     if(tokens.top()->type != BRACKET_CLOSE)
         error_handle(")", tokens.top()->line);
@@ -437,16 +454,18 @@ void for_command(tokenizer* t) {
         remove_stack_top(stack_top);
         if(decl_command(t) == -1)
             error_handle("command", tokens.top()->line);
+        get_token(t);
+        if(tokens.top()->type != SEMICOLON)
+            error_handle(";", tokens.top()->line);
     }
-    get_token(t);
     if(tokens.top()->type != SEMICOLON)
         error_handle(";", tokens.top()->line);
     get_token(t);
-    exp(t);
+    if(exp(t) == -1)
+        error_handle("expression", tokens.top()->line);
     get_token(t);
     if(set_command(t) == -1)
         error_handle("command", tokens.top()->line);
-    get_token(t);
     if(tokens.top()->type != BRACKET_CLOSE)
         error_handle(")", tokens.top()->line);
     block_commands(t);
@@ -459,7 +478,8 @@ void while_command(tokenizer* t) {
     if(tokens.top()->type != BRACKET_OPEN)
         error_handle("(", tokens.top()->line);
     get_token(t);
-    exp(t);
+    if(exp(t) == -1)
+        error_handle("expression", tokens.top()->line);
     get_token(t);
     if(tokens.top()->type != BRACKET_CLOSE)
         error_handle(")", tokens.top()->line);
@@ -476,6 +496,7 @@ void input_command(tokenizer* t) {
     Lvalue(t);
     if(tokens.top()->type != BRACKET_CLOSE)
         error_handle(")", tokens.top()->line);
+    get_token(t);
 }
 
 void print_command(tokenizer* t) {
@@ -485,9 +506,11 @@ void print_command(tokenizer* t) {
     if(tokens.top()->type != BRACKET_OPEN)
         error_handle("(", tokens.top()->line);
     get_token(t);
-    exp(t);
+    if(exp(t) == -1)
+        error_handle("expression", tokens.top()->line);
     if(tokens.top()->type != BRACKET_CLOSE)
         error_handle(")", tokens.top()->line);
+    get_token(t);
 }
 
 void return_command(tokenizer* t) {
@@ -495,13 +518,14 @@ void return_command(tokenizer* t) {
     get_token(t);
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
     if(tokens.top()->type != SEMICOLON) {
-        exp(t);
+        if(exp(t) == -1)
+            error_handle("expression", tokens.top()->line);
         get_token(t);
     }
 }
 
 void loop_command(tokenizer* t) {
-    
+    get_token(t);
 }
 
 // first part of this lex should be read before calling this function
@@ -520,17 +544,6 @@ void command(tokenizer* t) {
     }
     else if(tokens.top()->value == "return")
         return_command(t);
-    else if(tokens.top()->type == VAR) {
-        // decl_command, set_command, func_call
-        int stack_top = tokens.size();
-        if(set_command(t) == -1) {
-            remove_stack_top(stack_top);
-            if(decl_command(t) == -1) {
-                remove_stack_top(stack_top);
-                func_call(t);
-            }
-        }
-    }
     else {
         if(tokens.top()->value == "input")
             input_command(t);
@@ -538,7 +551,18 @@ void command(tokenizer* t) {
             print_command(t);
         else if(tokens.top()->value == "break" || tokens.top()->value == "continue")
             loop_command(t);
-        get_token(t);
+        else if(tokens.top()->type == VAR) {
+            // decl_command, set_command, func_call
+            int stack_top = tokens.size();
+            if(set_command(t) == -1) {
+                remove_stack_top(stack_top);
+                if(decl_command(t) == -1) {
+                    remove_stack_top(stack_top);
+                    func_call(t);
+                }
+                get_token(t);
+            }
+        }
         if(tokens.top()->type != SEMICOLON)
             error_handle(";", tokens.top()->line);
         get_token(t);    
@@ -617,4 +641,7 @@ void program(tokenizer* t) {
     std::cout << "program"  << std::endl;
     program_parts(t);
     main_function(t);
+    get_token(t);
+    if(tokens.top()->type != END_OF_FILE)
+        error_handle("EOF", tokens.top()->line);
 }

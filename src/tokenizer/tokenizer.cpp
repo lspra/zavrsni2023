@@ -176,8 +176,8 @@ void tokenizer::set_token_type(Token* t)
         else
             t->type = VAR;
     }
-    if(state == end_of_file)
-        t->type == END_OF_FILE;
+    if(state == end_of_file) 
+        t->type = END_OF_FILE;
     if (state == number)
         t->type = INT;
     if(state == floating_numb)
