@@ -1,5 +1,5 @@
 <program> -> <program_parts> <main_function>
-<program_parts> -> <class_decl> <program_parts> | <function> <program_parts> | $
+<program_parts> -> <class_decl> <program_parts> | <function> <program_parts> | <set_command>; <program_parts> | <decl_command>; <program_parts> | $
 <class_decl> -> class var <base_classes> {<class_body>}
 <base_classes> -> (<base_list>) | $
 <base_list> -> var, <base_list> | var

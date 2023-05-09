@@ -1,6 +1,6 @@
 main() {
-    # a = int16;
-    # b = float64;
+    a = int16;
+    b = float64;
     input(a);
     print(a * 18.2 + 11);
     b = 9,3578 / 11 << 22 * 31;
