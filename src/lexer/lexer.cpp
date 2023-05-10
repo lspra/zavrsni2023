@@ -141,12 +141,26 @@ void return_type(tokenizer* t) {
     get_token(t);
 }
 
+bool var(tokenizer* t) {
+    std::cout << "var"  << std::endl;
+    std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
+    if(tokens.top()->type != VAR)
+        return false;
+    get_token(t);
+    if(tokens.top()->type == DOT) {
+        get_token(t);
+        if(tokens.top()->type != VAR)
+            return false;
+        get_token(t);
+    }
+    return true;
+}
+
 void Lvalue(tokenizer* t) {
     std::cout << "Lvalue"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-    if(tokens.top()->type != VAR)
+    if(!var(t))
         error_handle("Lvalue", tokens.top()->line);
-    get_token(t);
     if(tokens.top()->type == SQUARE_OPEN) {
         get_token(t);
         if(!exp(t))
@@ -329,15 +343,8 @@ void arguments(tokenizer* t) {
 bool func_call(tokenizer* t) {
     std::cout << "function call"  << std::endl;
     std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-    if(tokens.top()->type != VAR)
+    if(!var(t))
         return false;
-    get_token(t);
-    if(tokens.top()->type == DOT) {
-        get_token(t);
-        if(tokens.top()->type != VAR)
-            error_handle("function name", tokens.top()->line);
-        get_token(t);
-    }
     if(tokens.top()->type != BRACKET_OPEN)
         return false;
     get_token(t);

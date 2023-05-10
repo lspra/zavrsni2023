@@ -27,7 +27,7 @@
 <while_command> -> while(<exp>) <block_commands>
 <input_command> -> input(<Lvalue>)
 <print_command> -> print(<exp>)
-<func_call> -> var(<arguments>) | var.var(<arguments>)
+<func_call> -> <var>(<arguments>)
 <arguments> -> <argument_list> | $
 <argument_list> -> <exp>, <argument_list> | <epx>
 <exp> -> <K> or <exp> | <K> xor <exp> | <K>
@@ -42,4 +42,5 @@
 <C> -> <B> << <C> | <B> >> <C> | <B>
 <B> -> <A> | +<A> | -<A> | ~<A>
 <A> -> <Lvalue> | (<exp>) | const | <func_call>
-<Lvalue> -> var | var[<exp>]
+<Lvalue> -> <var> | <var>[<exp>]
+<var> -> var | var.var
