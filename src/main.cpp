@@ -3,8 +3,8 @@
 
 int main(int argc, char** argv)
 {
-    std::string file = argv[1];
-    tokenizer *t = new tokenizer(file);
-    program(t);
-    std::cout << "Parsing finished" << std::endl;
+	std::string file = argv[1];
+	tokenizer *t = new tokenizer(file);
+	program(t);
+	std::cout << "Parsing finished" << std::endl;
 }
