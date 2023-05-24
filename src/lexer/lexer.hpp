@@ -1,8 +1,8 @@
-#include "../tokenizer/tokenizer.hpp"
+#include "records.hpp"
 
 void program(tokenizer* t);
-void program_parts(tokenizer* t);
-bool exp(tokenizer* t);
-void block_commands(tokenizer* t);
-bool set_command(tokenizer* t);
-bool func_call(tokenizer* t);
+void program_parts(tokenizer* t, Scope* scope);
+bool exp(tokenizer* t, Scope* scope);
+void block_commands(tokenizer* t, Scope* scope);
+bool set_command(tokenizer* t, Scope* scope);
+bool func_call(tokenizer* t, Scope* scope);

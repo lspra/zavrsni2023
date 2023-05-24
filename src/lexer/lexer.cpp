@@ -5,6 +5,10 @@
 std::stack<Token*> tokens;
 std::stack<Token*> temp_removed;
 
+std::vector <Variable> global_variables;
+std::vector <Function> functions;
+std::vector <Class> classes;
+
 void remove_stack_top(int index) {
 	for(int i = tokens.size() - index; i > 0; i--) {
 		temp_removed.push(tokens.top());
@@ -23,59 +27,106 @@ void get_token(tokenizer* t) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 }
 
-void error_handle(std::string expected, int line) {
-	std::cerr << "Expected " << expected << " in line " << line << std::endl;
+void error_handle(std::string expected) {
+	std::cerr << "Expected " << expected << " in line " << tokens.top()->line << std::endl;
 	exit(1);
 }
 
 // <var> -> var | var.var
-bool var(tokenizer* t) {
+// returns Variable/Function/Class pointer if this is already initialised varible/function
+// returns NULL if there is an error
+// returns Variable with type -1 if varible/class/function is not initialised
+Variable* var(tokenizer* t, Scope* scope) {
 	std::cout << "var"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
+	Token* var_token;
+	var_token = tokens.top();
 	if(tokens.top()->type != VAR)
-		return false;
+		return NULL;
 	get_token(t);
+	Variable* var = new Variable();
+	Scope* cur_scope = scope;
 	if(tokens.top()->type == DOT) {
+		bool found = false;
+		while (!found && cur_scope != NULL)
+		{
+			for(auto class_: cur_scope->classes) {
+				if(class_.token->value == var_token->value) {
+					cur_scope = class_.class_scope;
+					found = true;
+					break;
+				}
+			}
+			if(!found)
+				cur_scope = cur_scope->parent_scope;
+		}
+		if(!found)
+			return NULL;
 		get_token(t);
 		if(tokens.top()->type != VAR)
-			return false;
+			return NULL;
+		var_token = tokens.top();
+		// TODO this should work for functions, plus for functions with same name and different arguments
+		// to do this, there should probably be change in grammar
+		// hmmm
+		// TODO we should allow var.var.var, like scope.variables.token.value
+		// this also needs grammar update, but with less work, it can be done with recursive calls to var function
+		for(unsigned i = 0; i < scope->variables.size(); i++) {
+			if (cur_scope->variables[i].token->value == var_token->value) {
+				return &cur_scope->variables[i];
+			}
+		}
 		get_token(t);
 	}
-	return true;
+	bool found = false;
+	while (!found && cur_scope != NULL)
+	{
+		for(unsigned int i = 0; i < cur_scope->variables.size(); i++) {
+			if(cur_scope->variables[i].token->value == var_token->value)
+				return &cur_scope->variables[i];
+		}
+		cur_scope = cur_scope->parent_scope;
+	}
+	var->token = var_token;
+	var->type = -1;
+	return var;
 }
 
 // <Lvalue> -> <var> | <var>[<exp>]
-void Lvalue(tokenizer* t) {
+Variable* Lvalue(tokenizer* t, Scope* scope) {
 	std::cout << "Lvalue"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!var(t))
-		error_handle("Lvalue", tokens.top()->line);
+	Variable* variable = var(t, scope);
+	if(variable == NULL)
+		error_handle("Lvalue");
+	// TODO add variable types, and parametar of array index
 	if(tokens.top()->type == SQUARE_OPEN) {
 		get_token(t);
-		if(!exp(t))
-			error_handle("expression", tokens.top()->line);
+		if(!exp(t, scope))
+			error_handle("expression");
 		if(tokens.top()->type != SQUARE_CLOSE)
-			error_handle("]", tokens.top()->type);
+			error_handle("]");
 		get_token(t);
 	}
+	return variable;
 }
 
 // <A> -> <Lvalue> | (<exp>) | const | <func_call>
-bool A(tokenizer* t) {
+bool A(tokenizer* t, Scope* scope) {
 	std::cout << "A"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type == VAR) {
 		int stack_top = tokens.size();
-		if(!func_call(t)) {
+		if(!func_call(t, scope)) {
 			remove_stack_top(stack_top);
-			Lvalue(t);
+			Lvalue(t, scope);
 		}
 	} else if(tokens.top()->type == BRACKET_OPEN) {
 		get_token(t);
-		if(!exp(t))
+		if(!exp(t, scope))
 			return false;
 		if(tokens.top()->type != BRACKET_CLOSE)
-			error_handle(")", tokens.top()->line);
+			error_handle(")");
 		get_token(t);
 	} else if(tokens.top()->type == INT || tokens.top()->type == FLOAT || tokens.top()->type == STRING) {
 		get_token(t);
@@ -86,173 +137,173 @@ bool A(tokenizer* t) {
 }
 
 // <B> -> <A> | +<A> | -<A> | ~<A>
-bool B(tokenizer* t) {
+bool B(tokenizer* t, Scope* scope) {
 	std::cout << "B"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->value == "+" || tokens.top()->value == "-" || tokens.top()->value == "~")
 		get_token(t);
-	return A(t);
+	return A(t, scope);
 }
 
 // <C> -> <B> << <C> | <B> >> <C> | <B>
-bool C(tokenizer* t) {
+bool C(tokenizer* t, Scope* scope) {
 	std::cout << "C"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!B(t))
+	if(!B(t, scope))
 		return false;
 	if(tokens.top()->value == "<<" || tokens.top()->value == ">>") {
 		get_token(t);
-		return C(t);
+		return C(t, scope);
 	}
 	return true;
 }
 
 // <D> -> <C> & <D> | <C>
-bool D(tokenizer* t) {
+bool D(tokenizer* t, Scope* scope) {
 	std::cout << "D"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!C(t))
+	if(!C(t, scope))
 		return false;
 	if(tokens.top()->value == "&") {
 		get_token(t);
-		return D(t);
+		return D(t, scope);
 	}
 	return true;
 }
 
 // <E> -> <D> '|' <E> | <D> ^ <E> | <D>
-bool E(tokenizer* t) {
+bool E(tokenizer* t, Scope* scope) {
 	std::cout << "E"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!D(t))
+	if(!D(t, scope))
 		return false;
 	if(tokens.top()->value == "|" || tokens.top()->value == "^") {
 		get_token(t);
-		return E(t);
+		return E(t, scope);
 	}
 	return true;
 }
 
 // <F> -> <E> * <F> | <E> / <F> | <E> % <F> | <E>
-bool F(tokenizer* t) {
+bool F(tokenizer* t, Scope* scope) {
 	std::cout << "F"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!E(t))
+	if(!E(t, scope))
 		return false;
 	if(tokens.top()->value == "*" || tokens.top()->value == "/" || tokens.top()->value == "%") {
 		get_token(t);
-		return F(t);
+		return F(t, scope);
 	}
 	return true;
 }
 
 // <G> -> <F> + <G> | <F> - <G> | <F>
-bool G(tokenizer* t) {
+bool G(tokenizer* t, Scope* scope) {
 	std::cout << "G"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!F(t))
+	if(!F(t, scope))
 		return false;
 	if(tokens.top()->value == "+" || tokens.top()->value == "-") {
 		get_token(t);
-		return G(t);
+		return G(t, scope);
 	}
 	return true;
 }
 
 // <H> -> <set_command> | <G>
-bool H(tokenizer* t) {
+bool H(tokenizer* t, Scope* scope) {
 	std::cout << "H"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	int stack_top = tokens.size();
-	if(!set_command(t)) {
+	if(!set_command(t, scope)) {
 		remove_stack_top(stack_top);
-		return G(t);
+		return G(t, scope);
 	}
 	return true;
 }
 
 
 // <I> -> <H> == <H> | <H> != <H>| <H> < <H> | <H> <= <H> | <H> > <H> | <H> >= <H> | <H>
-bool I(tokenizer* t) {
+bool I(tokenizer* t, Scope* scope) {
 	std::cout << "I"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!H(t))
+	if(!H(t, scope))
 		return false;
 	if (tokens.top()->value == "==" || tokens.top()->value == "!=" || tokens.top()->value == "<" ||
 		 tokens.top()->value == "<=" || tokens.top()->value == ">" || tokens.top()->value == ">=") {
 		get_token(t);
-		return H(t);
+		return H(t, scope);
 	}
 	return true;
 }
 
 // <J> -> not <I> | <I>
-bool J(tokenizer* t) {
+bool J(tokenizer* t, Scope* scope) {
 	std::cout << "J"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->value == "not")
 		get_token(t);
-	return I(t);
+	return I(t, scope);
 }
 
 // <K> -> <J> and <K> | <J>
-bool K(tokenizer* t) {
+bool K(tokenizer* t, Scope* scope) {
 	std::cout << "K"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!J(t))
+	if(!J(t, scope))
 		return false;
 	if(tokens.top()->value == "and") {
 		get_token(t);
-		return K(t);
+		return K(t, scope);
 	}
 	return true;
 }
 
 // <exp> -> <K> or <exp> | <K> xor <exp> | <K>
-bool exp(tokenizer* t) {
+bool exp(tokenizer* t, Scope* scope) {
 	std::cout << "exp"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!K(t))
+	if(!K(t, scope))
 		return false;
 	if(tokens.top()->value == "or" || tokens.top()->value == "xor") {
 		get_token(t);
-		return exp(t);
+		return exp(t, scope);
 	}
 	return true;
 }
 
 // <argument_list> -> <exp>, <argument_list> | <epx>
-void argument_list(tokenizer* t) {
+void argument_list(tokenizer* t, Scope* scope) {
 	std::cout << "argument list"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!exp(t))
-		error_handle("expression", tokens.top()->line);
+	if(!exp(t, scope))
+		error_handle("expression");
 	if(tokens.top()->type == COMMA) {
 		get_token(t);
-		argument_list(t);
+		argument_list(t, scope);
 	}
 }
 
 // <arguments> -> <argument_list> | $
-void arguments(tokenizer* t) {
+void arguments(tokenizer* t, Scope* scope) {
 	std::cout << "arguments"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != BRACKET_CLOSE)
-		argument_list(t);
+		argument_list(t, scope);
 }
 
 // <func_call> -> <var>(<arguments>)
 // returns true if what the function is parsing is set_command
 // error handling should be done after calling the function
-bool func_call(tokenizer* t) {
+bool func_call(tokenizer* t, Scope* scope) {
 	std::cout << "function call"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!var(t))
+	if(!var(t, scope))
 		return false;
 	if(tokens.top()->type != BRACKET_OPEN)
 		return false;
 	get_token(t);
-	arguments(t);
+	arguments(t, scope);
 	if(tokens.top()->type != BRACKET_CLOSE)
 		return false;
 	get_token(t);
@@ -260,19 +311,30 @@ bool func_call(tokenizer* t) {
 }
 
 // <decl_command> -> <Lvalue> = data_type
-bool decl_command(tokenizer* t) {
+Variable decl_command(tokenizer* t, Scope* scope) {
 	std::cout << "decl command"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(tokens.top()->type != VAR)
-		return false;
+	if(tokens.top()->type != VAR) {
+		Variable x = {.token = NULL};
+		return x;
+	}
+	Variable* var = new Variable();
+	var->token = tokens.top();
 	get_token(t);
-	if(tokens.top()->value != "=")
-		return false;
+	if(tokens.top()->value != "=") {
+		var->token = NULL;
+		return *var;
+	}
 	get_token(t);
-	if(tokens.top()->type != DATA_TYPE)
-		return false;
+	if(tokens.top()->type != DATA_TYPE) {
+		var->token = NULL;
+		return *var;
+	}
+	var->type = 0;
+	// var.type = data_types.index(tokens.top()->value);
 	get_token(t);
-	return true;
+	scope->variables.push_back(*var);
+	return *var;
 }
 
 // <set_command> -> <Lvalue> operator_modify | operator_modify <Lvalue>
@@ -281,52 +343,62 @@ bool decl_command(tokenizer* t) {
 // <set_command> -> <Lvalue> = <exp>
 // returns true if what the function is parsing is set_command
 // error handling should be done after calling the function
-bool set_command(tokenizer* t) {
+bool set_command(tokenizer* t, Scope* scope) {
 	std::cout << "set command"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type == OPERATOR_MODIFY) {
 		get_token(t);
-		Lvalue(t);
+		Lvalue(t, scope);
 	}
-	int stack_top = tokens.size();
 	if(tokens.top()->type == VAR) {
-		Lvalue(t);
+		Variable* var = Lvalue(t, scope);
 		if(tokens.top()->type == OPERATOR_MODIFY) {
+			if (var->type == -1)
+				error_handle("Defined Lvalue");
 			get_token(t);
 			if(tokens.top()->type == BRACKET_OPEN) {
 				get_token(t);
-				if(!exp(t))
-					error_handle("expression", tokens.top()->line);
+				if(!exp(t, scope))
+					error_handle("expression");
 				if(tokens.top()->type != BRACKET_CLOSE)
-					error_handle(")", tokens.top()->line);
+					error_handle(")");
 				get_token(t);
 			} else if(tokens.top()->type == INT || tokens.top()->type == FLOAT) {
 				get_token(t);
 			}
 		} else if(tokens.top()->value == "=") {
 			get_token(t);
-			if(!exp(t))
+			if(!exp(t, scope))
 				return false;
+			if(var->type == -1) {
+				// TODO set to type of exp
+				var->type = 0;
+				scope->variables.push_back(*var);
+			}
 		} else {
 			return false;
 		}
 	} else if(tokens.top()->type == BRACKET_OPEN) {
 		get_token(t);
-		if(!exp(t))
+		if(!exp(t, scope))
 			return false;
 		if(tokens.top()->type != BRACKET_CLOSE)
 			return false;
 		get_token(t);
 		if(tokens.top()->type == OPERATOR_MODIFY) {
 			get_token(t);
-			Lvalue(t);
+			Variable* var = Lvalue(t, scope);
+			if(var->type == -1)
+				error_handle("defined Lvalue");
 		} else
 			return false;
 	} else if(tokens.top()->type == INT || tokens.top()->type == FLOAT) {
 		get_token(t);
 		if(tokens.top()->type == OPERATOR_MODIFY) {
 			get_token(t);
-			Lvalue(t);
+			Variable* var = Lvalue(t, scope);
+			if(var->type == -1)
+				error_handle("defined Lvalue");
 		} else {
 			return false;
 		}
@@ -337,326 +409,347 @@ bool set_command(tokenizer* t) {
 }
 
 // <if_command> -> if(<exp>) <block_commands> | if(<exp>) <block_commands> else <block_commands>
-void if_command(tokenizer* t) {
+void if_command(tokenizer* t, Scope* scope) {
 	std::cout << "if command"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	get_token(t);
+	Scope* if_scope = new Scope();
+	if_scope->parent_scope = scope;
 	if(tokens.top()->type != BRACKET_OPEN)
-		error_handle("(", tokens.top()->line);
+		error_handle("(");
 	get_token(t);
-	if(!exp(t))
-		error_handle("expression", tokens.top()->line);
+	if(!exp(t, if_scope))
+		error_handle("expression");
 	if(tokens.top()->type != BRACKET_CLOSE)
-		error_handle(")", tokens.top()->line);
+		error_handle(")");
 	get_token(t);
-	block_commands(t);
+	block_commands(t, if_scope);
 	if(tokens.top()->value == "else") {
 		get_token(t);
-		block_commands(t);
+		block_commands(t, if_scope);
 	}
 }
 
 // <for_command> -> for(<set_command>; <exp>; <set_command>) <block_commands>
 // <for_command> -> for(<decl_command>; <exp>; <set_command>) <block_commands>
-void for_command(tokenizer* t) {
+void for_command(tokenizer* t, Scope* scope) {
 	std::cout << "for command"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
+	Scope* for_scope = new Scope();
+	for_scope->parent_scope = scope;
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
-		error_handle("(", tokens.top()->line);
+		error_handle("(");
 	get_token(t);
 	int stack_top = tokens.size();
-	if(!set_command(t)) {
+	if(!set_command(t, for_scope)) {
 		remove_stack_top(stack_top);
-		if(!decl_command(t))
-			error_handle("command", tokens.top()->line);
+		if(decl_command(t, for_scope).token == NULL)
+			error_handle("command");
 	}
 	if(tokens.top()->type != SEMICOLON)
-		error_handle(";", tokens.top()->line);
+		error_handle(";");
 	get_token(t);
-	if(!exp(t))
-		error_handle("expression", tokens.top()->line);
+	if(!exp(t, for_scope))
+		error_handle("expression");
 	if(tokens.top()->type != SEMICOLON)
-		error_handle(";", tokens.top()->line);
+		error_handle(";");
 	get_token(t);
-	if(!set_command(t))
-		error_handle("command", tokens.top()->line);
+	if(!set_command(t, for_scope))
+		error_handle("command");
 	if(tokens.top()->type != BRACKET_CLOSE)
-		error_handle(")", tokens.top()->line);
+		error_handle(")");
 	get_token(t);
-	block_commands(t);
+	block_commands(t, for_scope);
 }
 
 // <while_command> -> while(<exp>) <block_commands>
-void while_command(tokenizer* t) {
+void while_command(tokenizer* t, Scope* scope) {
 	std::cout << "while command"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
+	Scope* while_scope = new Scope();
+	while_scope->parent_scope = scope;
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
-		error_handle("(", tokens.top()->line);
+		error_handle("(");
 	get_token(t);
-	if(!exp(t))
-		error_handle("expression", tokens.top()->line);
+	if(!exp(t, while_scope))
+		error_handle("expression");
 	get_token(t);
 	if(tokens.top()->type != BRACKET_CLOSE)
-		error_handle(")", tokens.top()->line);
+		error_handle(")");
 	get_token(t);
-	block_commands(t);
+	block_commands(t, while_scope);
 }
 
 // <input_command> -> input(<Lvalue>)
-void input_command(tokenizer* t) {
+void input_command(tokenizer* t, Scope* scope) {
 	std::cout << "input command"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
-		error_handle("(", tokens.top()->line);
+		error_handle("(");
 	get_token(t);
-	Lvalue(t);
+	Lvalue(t, scope);
 	if(tokens.top()->type != BRACKET_CLOSE)
-		error_handle(")", tokens.top()->line);
+		error_handle(")");
 	get_token(t);
 }
 
 // <print_command> -> print(<exp>)
-void print_command(tokenizer* t) {
+void print_command(tokenizer* t, Scope* scope) {
 	std::cout << "print command"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
-		error_handle("(", tokens.top()->line);
+		error_handle("(");
 	get_token(t);
-	if(!exp(t))
-		error_handle("expression", tokens.top()->line);
+	if(!exp(t, scope))
+		error_handle("expression");
 	if(tokens.top()->type != BRACKET_CLOSE)
-		error_handle(")", tokens.top()->line);
+		error_handle(")");
 	get_token(t);
 }
 
 // <return_command> -> return <exp> | return
-void return_command(tokenizer* t) {
+void return_command(tokenizer* t, Scope* scope) {
 	std::cout << "return command"  << std::endl;
 	get_token(t);
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != SEMICOLON) {
-		if(!exp(t))
-			error_handle("expression", tokens.top()->line);
+		if(!exp(t, scope))
+			error_handle("expression");
 	}
 }
 
 // <loop_command> -> break | continue
-void loop_command(tokenizer* t) {
+void loop_command(tokenizer* t, Scope* scope) {
 	get_token(t);
 }
 
 // <command> -> <decl_command>; | <if_commmand> | <for_command> | <while_command>
 // <command> -> <input_command>; | <print_command>; | <func_call>;
 // <command> -> <set_command>; | <return_command>; | <loop_command>;
-void command(tokenizer* t) {
+void command(tokenizer* t, Scope* scope) {
 	std::cout << "command"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->value == "if")
-		if_command(t);
+		if_command(t, scope);
 	else if(tokens.top()->value == "for")
-		for_command(t);
+		for_command(t, scope);
 	else if(tokens.top()->value == "while")
-		while_command(t);
+		while_command(t, scope);
 	else {
 		if(tokens.top()->value == "return")
-			return_command(t);
+			return_command(t, scope);
 		else if(tokens.top()->value == "input")
-			input_command(t);
+			input_command(t, scope);
 		else if(tokens.top()->value == "print")
-			print_command(t);
+			print_command(t, scope);
 		else if(tokens.top()->value == "break" || tokens.top()->value == "continue")
-			loop_command(t);
+			loop_command(t, scope);
 		else if(tokens.top()->type == VAR) {
 			// decl_command, set_command, func_call
 			int stack_top = tokens.size();
-			if(!set_command(t)) {
+			if(!set_command(t, scope)) {
 				remove_stack_top(stack_top);
-				if(!decl_command(t)) {
+				if(decl_command(t, scope).token == NULL) {
 					remove_stack_top(stack_top);
-					func_call(t);
+					func_call(t, scope);
 				}
 			}
 		}
 		if(tokens.top()->type != SEMICOLON)
-			error_handle(";", tokens.top()->line);
+			error_handle(";");
 		get_token(t);
 	}
 }
 
 // <commands> -> <command> <commands> | $
-void commands(tokenizer* t) {
+void commands(tokenizer* t, Scope* scope) {
 	std::cout << "commands"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type == CURLY_CLOSE)
 		return;
-	command(t);
-	commands(t);
+	command(t, scope);
+	commands(t, scope);
 }
 
 // <block_commands> -> {<commands>} | <command>
-void block_commands(tokenizer* t) {
+void block_commands(tokenizer* t, Scope* scope) {
 	std::cout << "block commands"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type == CURLY_OPEN) {
 		get_token(t);
-		commands(t);
+		commands(t, scope);
 		if(tokens.top()->type != CURLY_CLOSE)
-			error_handle("}", tokens.top()->line);
+			error_handle("}");
 		get_token(t);
 	} else {
-		command(t);
+		command(t, scope);
 	}
 }
 
 // <func_arguments_list> -> <decl_command>, <func_arguments_list> | <decl_command>
-void func_arguments_list(tokenizer* t) {
+void func_arguments_list(tokenizer* t, Function* function) {
 	std::cout << "func arguments list"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!decl_command(t))
-		error_handle("declaration command", tokens.top()->line);
+	// TODO check if this function already has this argument
+	Variable argument = decl_command(t, &function->function_scope);
+	function->arguments.push_back(argument);
+	function->function_scope.variables.push_back(argument);
+	if(argument.token == NULL)
+		error_handle("declaration command");
 	if(tokens.top()->type == COMMA) {
 		get_token(t);
-		func_arguments_list(t);
+		func_arguments_list(t, function);
 	}
 }
 
 // <function_arguments> -> <func_arguments_list> | $
-void function_arguments(tokenizer* t) {
+void function_arguments(tokenizer* t, Function* function) {
 	std::cout << "function arguments" << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type == VAR) {
-		func_arguments_list(t);
+		func_arguments_list(t, function);
 	}
 }
 
 // <return_type> -> =data_type | $
-void return_type(tokenizer* t) {
+void return_type(tokenizer* t, Function* function) {
 	std::cout << "return type"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->value != "=")
 		return;
 	get_token(t);
 	if(tokens.top()->type != DATA_TYPE)
-		error_handle("return type", tokens.top()->line);
+		error_handle("return type");
+	function->type = 0;
+	// function.type = data_types.index(tokens.top()->value);
 	get_token(t);
 }
 
 // <function> -> var (<function_arguments>) <return_type> <block_commands>
-void function(tokenizer* t) {
+void function(tokenizer* t, Scope* scope) {
 	std::cout << "function"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	get_token(t);
+	Function* function = new Function();
+	function->token = tokens.top();
+	function->function_scope.parent_scope = scope;
 	if(tokens.top()->type != BRACKET_OPEN)
-		error_handle("(", tokens.top()->line);
+		error_handle("(");
 	get_token(t);
-	function_arguments(t);
+	function_arguments(t, function);
 	if(tokens.top()->type != BRACKET_CLOSE)
-		error_handle(")", tokens.top()->line);
+		error_handle(")");
 	get_token(t);
-	return_type(t);
-	block_commands(t);
+	return_type(t, function);
+	block_commands(t, &function->function_scope);
+	// TODO check if function with this name and arguments already exists
+	scope->functions.push_back(function);
 }
 
 // <base_list> -> var, <base_list> | var
-void base_list(tokenizer* t) {
+void base_list(tokenizer* t, Scope* scope) {
 	std::cout << "base list"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
-		error_handle("base class name", tokens.top()->line);
+		error_handle("base class name");
 	get_token(t);
 	if(tokens.top()->type == COMMA) {
 		get_token(t);
-		base_list(t);
+		base_list(t, scope);
 	}
 }
 
 // <base_classes> -> (<base_list>) | $
-void base_classes(tokenizer *t) {
+void base_classes(tokenizer *t, Scope* scope) {
 	std::cout << "base classes"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type == CURLY_OPEN)
 		return;
 	if(tokens.top()->type != BRACKET_OPEN)
-		error_handle("(", tokens.top()->line);
-	base_list(t);
+		error_handle("(");
+	base_list(t, scope);
 	if(tokens.top()->type != BRACKET_CLOSE)
-		error_handle(")", tokens.top()->line);
+		error_handle(")");
 	get_token(t);
 }
 
 // <visibility_specifier> -> public | private
-void visibility_specifier(tokenizer* t) {
+void visibility_specifier(tokenizer* t, Scope* scope) {
 	std::cout << "visibility specifier"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->value != "private" && tokens.top()->value != "public")
-		error_handle("visibility specifier", tokens.top()->line);
+		error_handle("visibility specifier");
 	get_token(t);
 	if(tokens.top()->type != COLON)
-		error_handle(":", tokens.top()->line);
+		error_handle(":");
 	get_token(t);
 }
 
 // <visibility_block> -> <visibility_specifier> <program_parts>
-void visibility_block(tokenizer* t) {
+void visibility_block(tokenizer* t, Scope* scope) {
 	std::cout << "visibility block"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	visibility_specifier(t);
-	program_parts(t);
+	visibility_specifier(t, scope);
+	program_parts(t, scope);
 }
 
 // <class_body> -> <visibility_block> <class_body> | <visibility_block>
-void class_body(tokenizer* t) {
+void class_body(tokenizer* t, Scope* scope) {
 	std::cout << "class body"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	visibility_block(t);
+	visibility_block(t, scope);
 	if(tokens.top()->type != CURLY_CLOSE)
-		class_body(t);
+		class_body(t, scope);
 }
 
 // <class_decl> -> class var <base_classes> {<class_body>}
-void class_decl(tokenizer* t) {
+Class class_decl(tokenizer* t, Scope* scope) {
 	std::cout << "class decl"  << std::endl;
 	get_token(t);
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
-		error_handle("class name", tokens.top()->line);
+		error_handle("class name");
+	Class class_;
+	class_.class_scope->parent_scope = scope;
+	class_.token = tokens.top();
 	get_token(t);
-	base_classes(t);
+	base_classes(t, class_.class_scope);
 	if(tokens.top()->type != CURLY_OPEN)
-		error_handle("{", tokens.top()->line);
+		error_handle("{");
 	get_token(t);
-	class_body(t);
+	class_body(t, class_.class_scope);
 	if(tokens.top()->type != CURLY_CLOSE)
-		error_handle("}", tokens.top()->line);
+		error_handle("}");
 	get_token(t);
+	return class_;
 }
 
 // <program_parts> -> <class_decl> <program_parts> | <function> <program_parts>
 // <program_parts> -> <set_command>; <program_parts> | <decl_command>; <program_parts> | $
-void program_parts(tokenizer* t) {
+void program_parts(tokenizer* t, Scope* scope) {
 	std::cout << "program parts"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->value == "class")
-		class_decl(t);
+		class_decl(t, scope);
 	else if(tokens.top()->type == VAR) {
 		int stack_top = tokens.size();
-		if(set_command(t)) {
+		if(set_command(t, scope)) {
 			if(tokens.top()->type != SEMICOLON)
-				error_handle(";", tokens.top()->line);
+				error_handle(";");
 			get_token(t);
 		} else {
 			remove_stack_top(stack_top);
-			if(decl_command(t)) {
+			if(decl_command(t, scope).token != NULL) {
 				if(tokens.top()->type != SEMICOLON)
-					error_handle(";", tokens.top()->line);
+					error_handle(";");
 				get_token(t);
 			} else {
 				remove_stack_top(stack_top);
-				function(t);
+				function(t, scope);
 			}
 		}
 	}
@@ -664,22 +757,25 @@ void program_parts(tokenizer* t) {
 	 && tokens.top()->value != "public"
 	 && tokens.top()->value != "private"
 	 && tokens.top()->type != CURLY_CLOSE)
-		program_parts(t);
+		program_parts(t, scope);
 }
 
 // <main_function> -> main (<function_arguments>) <block_commands>
-void main_function(tokenizer* t) {
+void main_function(tokenizer* t, Scope* scope) {
 	std::cout << "main function"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
+	Function* function = new Function();
+	function->function_scope.parent_scope = scope;
+	function->token = tokens.top();
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
-		error_handle("(", tokens.top()->line);
+		error_handle("(");
 	get_token(t);
-	function_arguments(t);
+	function_arguments(t, function);
 	if(tokens.top()->type != BRACKET_CLOSE)
-		error_handle(")", tokens.top()->line);
+		error_handle(")");
 	get_token(t);
-	block_commands(t);
+	block_commands(t, &function->function_scope);
 }
 
 // <program> -> <program_parts> <main_function>
@@ -689,9 +785,11 @@ void main_function(tokenizer* t) {
 // is on the top of the tokens stack
 void program(tokenizer* t) {
 	std::cout << "program"  << std::endl;
+	Scope* global_scope = new Scope();
+	global_scope->parent_scope = NULL;
 	get_token(t);
-	program_parts(t);
-	main_function(t);
+	program_parts(t, global_scope);
+	main_function(t, global_scope);
 	if(tokens.top()->type != END_OF_FILE)
-		error_handle("EOF", tokens.top()->line);
+		error_handle("EOF");
 }
