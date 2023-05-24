@@ -2,11 +2,14 @@
 #include <string>
 #include <vector>
 
-// if token is NULL, this is not a variable
-struct Variable {
-	Token* token;
-	int type;
-	// initial_value;
+class Variable {
+	public:
+		Token* token;
+		int type;
+		// initial_value;
+		bool operator== (const Variable& other) {
+			return this->token->value == other.token->value;
+		}
 };
 class Class;
 class Function;

@@ -311,30 +311,24 @@ bool func_call(tokenizer* t, Scope* scope) {
 }
 
 // <decl_command> -> <Lvalue> = data_type
-Variable decl_command(tokenizer* t, Scope* scope) {
+bool decl_command(tokenizer* t, Scope* scope) {
 	std::cout << "decl command"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(tokens.top()->type != VAR) {
-		Variable x = {.token = NULL};
-		return x;
-	}
+	if(tokens.top()->type != VAR)
+		return false;
 	Variable* var = new Variable();
 	var->token = tokens.top();
 	get_token(t);
-	if(tokens.top()->value != "=") {
-		var->token = NULL;
-		return *var;
-	}
+	if(tokens.top()->value != "=") 
+		return false;
 	get_token(t);
-	if(tokens.top()->type != DATA_TYPE) {
-		var->token = NULL;
-		return *var;
-	}
+	if(tokens.top()->type != DATA_TYPE)
+		return false;
 	var->type = 0;
 	// var.type = data_types.index(tokens.top()->value);
-	get_token(t);
 	scope->variables.push_back(*var);
-	return *var;
+	get_token(t);
+	return true;
 }
 
 // <set_command> -> <Lvalue> operator_modify | operator_modify <Lvalue>
@@ -368,6 +362,8 @@ bool set_command(tokenizer* t, Scope* scope) {
 			}
 		} else if(tokens.top()->value == "=") {
 			get_token(t);
+			if(tokens.top()->type == DATA_TYPE)
+				return false;
 			if(!exp(t, scope))
 				return false;
 			if(var->type == -1) {
@@ -444,7 +440,7 @@ void for_command(tokenizer* t, Scope* scope) {
 	int stack_top = tokens.size();
 	if(!set_command(t, for_scope)) {
 		remove_stack_top(stack_top);
-		if(decl_command(t, for_scope).token == NULL)
+		if(!decl_command(t, for_scope))
 			error_handle("command");
 	}
 	if(tokens.top()->type != SEMICOLON)
@@ -553,7 +549,7 @@ void command(tokenizer* t, Scope* scope) {
 			int stack_top = tokens.size();
 			if(!set_command(t, scope)) {
 				remove_stack_top(stack_top);
-				if(decl_command(t, scope).token == NULL) {
+				if(!decl_command(t, scope)) {
 					remove_stack_top(stack_top);
 					func_call(t, scope);
 				}
@@ -595,11 +591,9 @@ void func_arguments_list(tokenizer* t, Function* function) {
 	std::cout << "func arguments list"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	// TODO check if this function already has this argument
-	Variable argument = decl_command(t, &function->function_scope);
-	function->arguments.push_back(argument);
-	function->function_scope.variables.push_back(argument);
-	if(argument.token == NULL)
-		error_handle("declaration command");
+	if(!decl_command(t, &function->function_scope))
+		error_handle("argument");
+	function->arguments.push_back(function->function_scope.variables.back());
 	if(tokens.top()->type == COMMA) {
 		get_token(t);
 		func_arguments_list(t, function);
@@ -743,7 +737,7 @@ void program_parts(tokenizer* t, Scope* scope) {
 			get_token(t);
 		} else {
 			remove_stack_top(stack_top);
-			if(decl_command(t, scope).token != NULL) {
+			if(decl_command(t, scope)) {
 				if(tokens.top()->type != SEMICOLON)
 					error_handle(";");
 				get_token(t);
