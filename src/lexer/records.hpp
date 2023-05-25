@@ -45,7 +45,7 @@ class Function: public Variable {
 	public:
 		// TODO return type
 		Scope* function_scope;
-		std::vector <Variable> function_parameters;
+		std::vector <Variable* > function_parameters;
 		Function(Token* token_, Scope* scope): function_scope(scope) {
 			this->token = token_;
 		}

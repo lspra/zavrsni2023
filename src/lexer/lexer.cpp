@@ -4,10 +4,7 @@
 
 std::stack<Token*> tokens;
 std::stack<Token*> temp_removed;
-
-std::vector <Variable> global_variables;
-std::vector <Function> functions;
-std::vector <Class> classes;
+Scope* global_scope;
 
 void remove_stack_top(int index) {
 	for(int i = tokens.size() - index; i > 0; i--) {
@@ -341,17 +338,16 @@ bool decl_command(tokenizer* t, Scope* scope) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
 		return false;
-	Variable* var = new Variable();
-	var->token = tokens.top();
+	Token* var = tokens.top();
 	get_token(t);
 	if(tokens.top()->value != "=")
 		return false;
 	get_token(t);
 	if(tokens.top()->type != DATA_TYPE)
 		return false;
-	var->type = 0;
+	Simple_Variable* variable = new Simple_Variable(var, bool_type);
 	// var.type = data_types.index(tokens.top()->value);
-	scope->variables.push_back(*var);
+	scope->variables.push_back(variable);
 	get_token(t);
 	return true;
 }
@@ -393,8 +389,8 @@ bool set_command(tokenizer* t, Scope* scope) {
 				return false;
 			if(var->type == -1) {
 				// TODO set to type of exp
-				var->type = 0;
-				scope->variables.push_back(*var);
+				var->type = bool_type;
+				scope->variables.push_back(var);
 			}
 		} else {
 			return false;
@@ -434,8 +430,7 @@ void if_command(tokenizer* t, Scope* scope) {
 	std::cout << "if command"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	get_token(t);
-	Scope* if_scope = new Scope();
-	if_scope->parent_scope = scope;
+	Scope* if_scope = new Scope(scope);
 	if(tokens.top()->type != BRACKET_OPEN)
 		error_handle("(");
 	get_token(t);
@@ -456,7 +451,7 @@ void if_command(tokenizer* t, Scope* scope) {
 void for_command(tokenizer* t, Scope* scope) {
 	std::cout << "for command"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	Scope* for_scope = new Scope();
+	Scope* for_scope = new Scope(scope);
 	for_scope->parent_scope = scope;
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
@@ -488,8 +483,7 @@ void for_command(tokenizer* t, Scope* scope) {
 void while_command(tokenizer* t, Scope* scope) {
 	std::cout << "while command"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	Scope* while_scope = new Scope();
-	while_scope->parent_scope = scope;
+	Scope* while_scope = new Scope(scope);
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
 		error_handle("(");
@@ -616,9 +610,9 @@ void func_arguments_list(tokenizer* t, Function* function) {
 	std::cout << "func arguments list"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	// TODO check if this function already has this argument
-	if(!decl_command(t, &function->function_scope))
+	if(!decl_command(t, function->function_scope))
 		error_handle("argument");
-	function->arguments.push_back(function->function_scope.variables.back());
+	function->function_parameters.push_back(function->function_scope->variables.back());
 	if(tokens.top()->type == COMMA) {
 		get_token(t);
 		func_arguments_list(t, function);
@@ -643,7 +637,7 @@ void return_type(tokenizer* t, Function* function) {
 	get_token(t);
 	if(tokens.top()->type != DATA_TYPE)
 		error_handle("return type");
-	function->type = 0;
+	function->type = bool_type;
 	// function.type = data_types.index(tokens.top()->value);
 	get_token(t);
 }
@@ -653,9 +647,7 @@ void function(tokenizer* t, Scope* scope) {
 	std::cout << "function"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	get_token(t);
-	Function* function = new Function();
-	function->token = tokens.top();
-	function->function_scope.parent_scope = scope;
+	Function* function = new Function(tokens.top(), scope);
 	if(tokens.top()->type != BRACKET_OPEN)
 		error_handle("(");
 	get_token(t);
@@ -664,9 +656,9 @@ void function(tokenizer* t, Scope* scope) {
 		error_handle(")");
 	get_token(t);
 	return_type(t, function);
-	block_commands(t, &function->function_scope);
+	block_commands(t, function->function_scope);
 	// TODO check if function with this name and arguments already exists
-	scope->functions.push_back(function);
+	scope->variables.push_back(function);
 }
 
 // <base_list> -> var, <base_list> | var
@@ -732,9 +724,7 @@ Class class_decl(tokenizer* t, Scope* scope) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
 		error_handle("class name");
-	Class class_;
-	class_.class_scope->parent_scope = scope;
-	class_.token = tokens.top();
+	Class class_(tokens.top(), scope);
 	get_token(t);
 	base_classes(t, class_.class_scope);
 	if(tokens.top()->type != CURLY_OPEN)
@@ -783,9 +773,7 @@ void program_parts(tokenizer* t, Scope* scope) {
 void main_function(tokenizer* t, Scope* scope) {
 	std::cout << "main function"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	Function* function = new Function();
-	function->function_scope.parent_scope = scope;
-	function->token = tokens.top();
+	Function* function = new Function(tokens.top(), scope);
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
 		error_handle("(");
@@ -794,7 +782,7 @@ void main_function(tokenizer* t, Scope* scope) {
 	if(tokens.top()->type != BRACKET_CLOSE)
 		error_handle(")");
 	get_token(t);
-	block_commands(t, &function->function_scope);
+	block_commands(t, function->function_scope);
 }
 
 // <program> -> <program_parts> <main_function>
@@ -804,8 +792,7 @@ void main_function(tokenizer* t, Scope* scope) {
 // is on the top of the tokens stack
 void program(tokenizer* t) {
 	std::cout << "program"  << std::endl;
-	Scope* global_scope = new Scope();
-	global_scope->parent_scope = NULL;
+	global_scope = new Scope(NULL);
 	get_token(t);
 	program_parts(t, global_scope);
 	main_function(t, global_scope);
