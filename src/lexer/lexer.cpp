@@ -32,64 +32,88 @@ void error_handle(std::string expected) {
 	exit(1);
 }
 
-// <var> -> var | var.var
+Variable* find_var(Token* var, std::vector<Variable*> variables) {
+
+	for(unsigned int i = 0; i < variables.size(); i++) {
+		if(variables[i]->token->value == var->value)
+			return variables[i];
+	}
+	return NULL;
+}
+
+Variable* Class::var_extend (tokenizer* t, Scope* scope) {
+	if(constructor == NULL)
+		return constructor->var_extend(t, scope);
+	// TODO something about default creation of class
+}
+
+Variable* Function::var_extend (tokenizer* t, Scope* scope)
+{
+	if (tokens.top()->type == BRACKET_OPEN) {
+		get_token(t);
+		arguments(t, scope);
+		if(tokens.top()->type != BRACKET_CLOSE)
+			error_handle(")");
+	} else {
+		error_handle("arguments");
+	}
+	get_token(t);
+	// TODO return Variable* of return type
+}
+
+Variable* Class_instance::var_extend (tokenizer* t, Scope* scope) {
+	if (tokens.top()->type != DOT)
+		return this;
+	get_token(t);
+	if(tokens.top()->type != VAR)
+		error_handle("member name");
+	bool found = false;
+	scope = this->class_type->class_scope;
+	while(scope != global_scope) {
+		Variable *new_var = find_var(tokens.top(), scope->variables);
+		if(new_var != NULL) {
+			return new_var;
+		}
+		scope = scope->parent_scope;
+	}
+	error_handle("Class has no member with name:" + tokens.top()->value);
+}
+
+// <var_extend> -> [<exp>] <var_extend> | (<arguments>) <var_extend> | $
+Variable* array::var_extend (tokenizer* t, Scope* scope) {
+	if(tokens.top()->type == SQUARE_OPEN) {
+		get_token(t);
+		exp(t, scope);
+		if(tokens.top()->type != SQUARE_CLOSE)
+			error_handle("]");
+	} else
+		return this;
+	get_token(t);
+	return new array(token, dimension - 1, size);
+}
+
+// <var> -> var<var_extend> | var<var_extend>.<var>
 // returns Variable/Function/Class pointer if this is already initialised varible/function
 // returns NULL if there is an error
 // returns Variable with type -1 if varible/class/function is not initialised
 Variable* var(tokenizer* t, Scope* scope) {
 	std::cout << "var"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	Token* var_token;
-	var_token = tokens.top();
 	if(tokens.top()->type != VAR)
 		return NULL;
-	get_token(t);
-	Variable* var = new Variable();
 	Scope* cur_scope = scope;
-	if(tokens.top()->type == DOT) {
-		bool found = false;
-		while (!found && cur_scope != NULL)
-		{
-			for(auto class_: cur_scope->classes) {
-				if(class_.token->value == var_token->value) {
-					cur_scope = class_.class_scope;
-					found = true;
-					break;
-				}
-			}
-			if(!found)
-				cur_scope = cur_scope->parent_scope;
-		}
-		if(!found)
-			return NULL;
-		get_token(t);
-		if(tokens.top()->type != VAR)
-			return NULL;
-		var_token = tokens.top();
-		// TODO this should work for functions, plus for functions with same name and different arguments
-		// to do this, there should probably be change in grammar
-		// hmmm
-		// TODO we should allow var.var.var, like scope.variables.token.value
-		// this also needs grammar update, but with less work, it can be done with recursive calls to var function
-		for(unsigned i = 0; i < scope->variables.size(); i++) {
-			if (cur_scope->variables[i].token->value == var_token->value) {
-				return &cur_scope->variables[i];
-			}
-		}
-		get_token(t);
+	Variable* variable = NULL;
+	while(scope != NULL && variable != NULL) {
+		variable = find_var(tokens.top(), scope->variables);
+		if(variable == NULL)
+			cur_scope = scope->parent_scope;
 	}
-	bool found = false;
-	while (!found && cur_scope != NULL)
-	{
-		for(unsigned int i = 0; i < cur_scope->variables.size(); i++) {
-			if(cur_scope->variables[i].token->value == var_token->value)
-				return &cur_scope->variables[i];
-		}
-		cur_scope = cur_scope->parent_scope;
+	Variable* new_variable;
+	while(new_variable != variable) {
+		variable = new_variable;
+		new_variable = variable->var_extend(t, scope);
 	}
-	var->token = var_token;
-	var->type = -1;
-	return var;
+	return new_variable;
 }
 
 // <Lvalue> -> <var> | <var>[<exp>]
@@ -285,6 +309,7 @@ void argument_list(tokenizer* t, Scope* scope) {
 }
 
 // <arguments> -> <argument_list> | $
+// TODO add checking if this are correct argument types and amount
 void arguments(tokenizer* t, Scope* scope) {
 	std::cout << "arguments"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
@@ -319,7 +344,7 @@ bool decl_command(tokenizer* t, Scope* scope) {
 	Variable* var = new Variable();
 	var->token = tokens.top();
 	get_token(t);
-	if(tokens.top()->value != "=") 
+	if(tokens.top()->value != "=")
 		return false;
 	get_token(t);
 	if(tokens.top()->type != DATA_TYPE)
