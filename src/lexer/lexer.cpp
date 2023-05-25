@@ -64,7 +64,6 @@ Variable* Class_instance::var_extend (tokenizer* t, Scope* scope) {
 	get_token(t);
 	if(tokens.top()->type != VAR)
 		error_handle("member name");
-	bool found = false;
 	scope = this->class_type->class_scope;
 	while(scope != global_scope) {
 		Variable *new_var = find_var(tokens.top(), scope->variables);
@@ -101,9 +100,9 @@ Variable* var(tokenizer* t, Scope* scope) {
 	Scope* cur_scope = scope;
 	Variable* variable = NULL;
 	while(scope != NULL && variable != NULL) {
-		variable = find_var(tokens.top(), scope->variables);
+		variable = find_var(tokens.top(), cur_scope->variables);
 		if(variable == NULL)
-			cur_scope = scope->parent_scope;
+			cur_scope = cur_scope->parent_scope;
 	}
 	Variable* new_variable;
 	while(new_variable != variable) {

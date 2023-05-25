@@ -16,8 +16,10 @@ enum data_types {
 	float32,
 	float64,
 	float96,
-	string
+	string_type
 };
+
+class Scope;
 
 class Variable {
 	public:
