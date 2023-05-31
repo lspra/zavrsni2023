@@ -1,5 +1,5 @@
 <program> -> <program_parts> <main_function>
-<program_parts> -> <class_decl> <program_parts> | <function> <program_parts> | <set_command>; <program_parts> | <decl_command>; <program_parts> | $
+<program_parts> -> <class_decl> <program_parts> | <function> <program_parts> | <decl_command>; <program_parts> | $
 <class_decl> -> class var <base_classes> {<class_body>}
 <base_classes> -> (<base_list>) | $
 <base_list> -> var, <base_list> | var
@@ -13,34 +13,31 @@
 <func_arguments_list> -> <decl_command>, <func_arguments_list> | <decl_command>
 <block_commands> -> {<commands>} | <command>
 <commands> -> <command> <commands> | $
-<command> -> <decl_command>; | <if_commmand> | <for_command> | <while_command> | <input_command>; | <print_command>; | <func_call>; | <set_command>; | <return_command>; | <loop_command>;
+<command> -> <decl_command>; | <if_commmand> | <for_command> | <while_command> | <input_command>; | <print_command>; | <exp>; | <return_command>; | <loop_command>;
 <loop_command> -> break | continue
 <return_command> -> return <exp> | return
 <decl_command> -> <Lvalue> = data_type
-<set_command> -> <Lvalue> operator_modify | operator_modify <Lvalue> | 
-    <Lvalue> operator_modify (<exp>) | (<exp>) operator_modify <Lvalue> | 
-    <Lvalue> operator_modify const | const operator_modify <Lvalue> |
-    <Lvalue> = <exp>
 <if_command> -> if(<exp>) <block_commands> | if(<exp>) <block_commands> else <block_commands>
-<for_command> -> for(<set_command>; <exp>; <set_command>) <block_commands>
-<for_command> -> for(<decl_command>; <exp>; <set_command>) <block_commands>
+<for_command> -> for(<exp>; <exp>; <exp>) <block_commands>
+<for_command> -> for(<decl_command>; <exp>; <exp>) <block_commands>
 <while_command> -> while(<exp>) <block_commands>
 <input_command> -> input(<Lvalue>)
 <print_command> -> print(<exp>)
-<func_call> -> <var>(<arguments>)
 <arguments> -> <argument_list> | $
-<argument_list> -> <exp>, <argument_list> | <epx>
+<argument_list> -> <exp>, <argument_list> | <exp>
 <exp> -> <K> or <exp> | <K> xor <exp> | <K>
 <K> -> <J> and <K> | <J>
 <J> -> not <I> | <I>
 <I> -> <H> == <H> | <H> != <H>| <H> < <H> | <H> <= <H> | <H> > <H> | <H> >= <H> | <H>
-<H> -> <set_command> | <G>
+<H> -> <Lvalue> operator_modify | operator_modify <Lvalue> |
+    <Lvalue> operator_modify (<exp>) | (<exp>) operator_modify <Lvalue> |
+    <Lvalue> operator_modify const | const operator_modify <Lvalue> | <G>
 <G> -> <F> + <G> | <F> - <G> | <F>
 <F> -> <E> * <F> | <E> / <F> | <E> % <F> | <E>
 <E> -> <D> '|' <E> | <D> ^ <E> | <D>
 <D> -> <C> & <D> | <C>
 <C> -> <B> << <C> | <B> >> <C> | <B>
 <B> -> <A> | +<A> | -<A> | ~<A>
-<A> -> <Lvalue> | (<exp>) | const | <func_call>
-<Lvalue> -> <var> | <var>[<exp>]
-<var> -> var | var.var
+<A> -> <Lvalue> = <exp>
+<A> -> <var> | (<exp>) | const
+<var> -> var | var[<exp>] | <var>.<var> | <var><var> | <var>(arguments)
