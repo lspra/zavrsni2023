@@ -62,6 +62,7 @@ class Class: public Variable {
 	public:
 		Scope* class_scope;
 		Function* constructor;
+		std::unordered_set<Class*> base_classes;
 		Class(std::string name_, Scope* scope) {
 			name = name_;
 			constructor = nullptr;

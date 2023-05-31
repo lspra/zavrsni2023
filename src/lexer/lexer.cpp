@@ -33,6 +33,34 @@ void error_handle(std::string expected) {
 	exit(1);
 }
 
+data_types convert_to_type(Token* token) {
+	if(token->type != DATA_TYPE)
+		error_handle("cannot convert this");
+	if(token->type == INT)
+		return int32;
+	if(token->type == FLOAT)
+		return float32;
+	if(token->type == STRING)
+		return string_type;
+}
+
+bool convertible(Var_object* from, Var_object* to) {
+	if(to->type == class_instance) {
+		if(from->type != class_instance)
+			return false;
+		Class_instance* from_class = (Class_instance*) from;
+		Class_instance* to_class = (Class_instance*) to;
+		return from_class->class_type->base_classes.contains(to_class->class_type);
+	}
+	if(from->type == to->type)
+		return true;
+	if (to->type == bool_type)
+		return true;
+	if(to->type <= float96)
+		return from->type != string_type;
+	return from->type == string_type && to->type == string_type;
+}
+
 Variable* find_var(Token* var, std::vector<Variable*> variables) {
 
 	for(unsigned int i = 0; i < variables.size(); i++) {
@@ -101,7 +129,7 @@ Variable* array::var_extend (tokenizer* t, Scope* scope) {
 // returns Variable/Function/Class pointer if this is already initialised varible/function
 // returns nullptr if there is an error
 // returns Variable with type -1 if varible/class/function is not initialised
-Variable* var(tokenizer* t, Scope* scope, bool* Lvalue) {
+Var_object* var(tokenizer* t, Scope* scope, bool* Lvalue) {
 	std::cout << "var"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
@@ -124,12 +152,14 @@ Variable* var(tokenizer* t, Scope* scope, bool* Lvalue) {
 		variable = new_variable;
 		new_variable = variable->var_extend(t, scope);
 	}
-	return new_variable;
+	if(new_variable->type == class_ || new_variable->type == function_)
+		error_handle("variable");
+	return (Var_object*) new_variable;
 }
 
-Variable* Lvalue(tokenizer* t, Scope* scope) {
+Var_object* Lvalue(tokenizer* t, Scope* scope) {
 	bool lvalue;
-	Variable* variable = var(t, scope, &lvalue);
+	Var_object* variable = var(t, scope, &lvalue);
 	if(!lvalue || variable->type == -1)
 		error_handle("defined Lvalue");
 	return variable;
@@ -137,7 +167,7 @@ Variable* Lvalue(tokenizer* t, Scope* scope) {
 
 // <A> -> <Lvalue> = <exp>
 // <A> -> <Lvalue> | (<exp>) | const
-bool A(tokenizer* t, Scope* scope) {
+Var_object* A(tokenizer* t, Scope* scope) {
 	std::cout << "A"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type == VAR) {
@@ -148,126 +178,132 @@ bool A(tokenizer* t, Scope* scope) {
 			Variable* variable = find_var(var_token, scope->variables);
 			if (variable == nullptr) {
 				exp(t, scope); // get type
-				variable = new Simple_Variable(var_token->value, bool_type);
+				Simple_Variable* variable = new Simple_Variable(var_token->value, bool_type);
 				scope->variables.push_back(variable);
-				return true;
+				return variable;
 			}
 			remove_stack_top();
 		}
 		bool lvalue;
-		var(t, scope, &lvalue);
+		Var_object* variable = var(t, scope, &lvalue);
 		if (tokens.top()->value == "=") {
-			// TODO if defined check if compatible type, if undefined set type
 			if(!lvalue)
 				error_handle("Lvalue");
 			get_token(t);
-			exp(t, scope);
+			// TODO get type from exp and check if it is same type
+			Var_object* expression = exp(t, scope);
+			if(convertible(expression, variable))
+				return variable;
+			else
+				error_handle("Cannot convert one type to another");
 		}
-	} else if(tokens.top()->type == BRACKET_OPEN) {
+	} 
+	if(tokens.top()->type == BRACKET_OPEN) {
 		get_token(t);
-		if(!exp(t, scope))
-			return false;
+		Var_object* expression = exp(t, scope);
 		if(tokens.top()->type != BRACKET_CLOSE)
 			error_handle(")");
 		get_token(t);
-	} else if(tokens.top()->type == INT || tokens.top()->type == FLOAT || tokens.top()->type == STRING) {
-		get_token(t);
-	} else {
-		return false;
-	}
-	return true;
+		return expression;
+	} 
+	if(tokens.top()->type == INT || tokens.top()->type == FLOAT || tokens.top()->type == STRING) 
+		return new Simple_Variable("", convert_to_type(tokens.top()));
+	error_handle("not okay");
 }
 
 // <B> -> <A> | +<A> | -<A> | ~<A>
-bool B(tokenizer* t, Scope* scope) {
+Var_object* B(tokenizer* t, Scope* scope) {
 	std::cout << "B"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(tokens.top()->value == "+" || tokens.top()->value == "-" || tokens.top()->value == "~")
+	if(tokens.top()->value == "+" || tokens.top()->value == "-" || tokens.top()->value == "~") {
+		// TODO check if operator is defined on typeof A
 		get_token(t);
+	}
 	return A(t, scope);
 }
 
 // <C> -> <B> << <C> | <B> >> <C> | <B>
-bool C(tokenizer* t, Scope* scope) {
+Var_object* C(tokenizer* t, Scope* scope) {
 	std::cout << "C"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!B(t, scope))
-		return false;
+	Var_object* b = B(t, scope);
 	if(tokens.top()->value == "<<" || tokens.top()->value == ">>") {
 		get_token(t);
-		return C(t, scope);
+		Var_object* c = C(t, scope);
+		// TODO check if b and c are int_type
 	}
-	return true;
+	return b;
 }
 
 // <D> -> <C> & <D> | <C>
-bool D(tokenizer* t, Scope* scope) {
+Var_object* D(tokenizer* t, Scope* scope) {
 	std::cout << "D"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!C(t, scope))
-		return false;
+	Var_object* c = C(t, scope);
 	if(tokens.top()->value == "&") {
 		get_token(t);
-		return D(t, scope);
+		Var_object* d = D(t, scope);
+		// TODO check if c and d are okey types
 	}
-	return true;
+	return c;
 }
 
 // <E> -> <D> '|' <E> | <D> ^ <E> | <D>
-bool E(tokenizer* t, Scope* scope) {
+Var_object* E(tokenizer* t, Scope* scope) {
 	std::cout << "E"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!D(t, scope))
-		return false;
+	Var_object* d = D(t, scope);
 	if(tokens.top()->value == "|" || tokens.top()->value == "^") {
 		get_token(t);
-		return E(t, scope);
+		Var_object* e = E(t, scope);
+		// TODO check types
 	}
-	return true;
+	return d;
 }
 
 // <F> -> <E> * <F> | <E> / <F> | <E> % <F> | <E>
-bool F(tokenizer* t, Scope* scope) {
+Var_object* F(tokenizer* t, Scope* scope) {
 	std::cout << "F"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!E(t, scope))
-		return false;
+	Var_object* e = E(t, scope);
 	if(tokens.top()->value == "*" || tokens.top()->value == "/" || tokens.top()->value == "%") {
 		get_token(t);
-		return F(t, scope);
+		// TODO check types
+		Var_object* f = F(t, scope);
 	}
-	return true;
+	return e;
 }
 
 // <G> -> <F> + <G> | <F> - <G> | <F>
-bool G(tokenizer* t, Scope* scope) {
+Var_object* G(tokenizer* t, Scope* scope) {
 	std::cout << "G"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!F(t, scope))
-		return false;
+	Var_object* f = F(t, scope);
 	if(tokens.top()->value == "+" || tokens.top()->value == "-") {
 		get_token(t);
-		return G(t, scope);
+		// TODO check types
+		Var_object* g = G(t, scope);
 	}
-	return true;
+	return f;
 }
 
 // <H> -> <Lvalue> operator_modify | operator_modify <Lvalue> |
 //    <Lvalue> operator_modify (<exp>) | (<exp>) operator_modify <Lvalue> |
 //    <Lvalue> operator_modify const | const operator_modify <Lvalue>  | <G>
-bool H(tokenizer* t, Scope* scope) {
+Var_object* H(tokenizer* t, Scope* scope) {
 	std::cout << "H"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	int stack_top = tokens.size();
 
 	if(tokens.top()->type == OPERATOR_MODIFY) {
 		get_token(t);
-		Variable* variable = Lvalue(t, scope);
-		return true;
+		Var_object* variable = Lvalue(t, scope);
+		// TODO check type
+		return variable;
 	}
 	if(tokens.top()->type == VAR) {
 		bool lvalue;
-		Variable* variable = var(t, scope, &lvalue);
+		Var_object* variable = var(t, scope, &lvalue);
 		if(tokens.top()->type == OPERATOR_MODIFY) {
 			if(!lvalue)
 				error_handle("Lvalue");
@@ -282,48 +318,53 @@ bool H(tokenizer* t, Scope* scope) {
 			} else if(tokens.top()->type == INT || tokens.top()->type == FLOAT) {
 				get_token(t);
 			}
-			return true;
+			// TODO check type
+			return variable;
 		}
 		remove_stack_top(stack_top);
 		return G(t, scope);
 	} 
 	
+	Var_object* expression;
 	if(tokens.top()->type == BRACKET_OPEN) {
 		get_token(t);
-		if(!exp(t, scope))
-			return false;
+		// TODO check if int/float type
+		expression = exp(t, scope);
 		if(tokens.top()->type != BRACKET_CLOSE)
-			return false;
+			error_handle(")");
 		get_token(t);
-	} else if(tokens.top()->type == INT || tokens.top()->type == FLOAT)
+	} else if(tokens.top()->type == INT || tokens.top()->type == FLOAT) {
+		expression = new Simple_Variable("", convert_to_type(tokens.top()));
 		get_token(t);
+	}
 
 	if(tokens.top()->type != OPERATOR_MODIFY) {
 		remove_stack_top(stack_top);
 		return G(t, scope);
 	}
 	get_token(t);
-	Lvalue(t, scope);
-	return true;
+	// TODO check types
+	Var_object* variable = Lvalue(t, scope);
+	return variable;
 }
 
 
 // <I> -> <H> == <H> | <H> != <H>| <H> < <H> | <H> <= <H> | <H> > <H> | <H> >= <H> | <H>
-bool I(tokenizer* t, Scope* scope) {
+Var_object* I(tokenizer* t, Scope* scope) {
 	std::cout << "I"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!H(t, scope))
-		return false;
+	Var_object* h1 = H(t, scope);
 	if (tokens.top()->value == "==" || tokens.top()->value == "!=" || tokens.top()->value == "<" ||
 		 tokens.top()->value == "<=" || tokens.top()->value == ">" || tokens.top()->value == ">=") {
 		get_token(t);
-		return H(t, scope);
+		Var_object* h2 = H(t, scope);
 	}
-	return true;
+	// TODO return type of bool
+	return h1;
 }
 
 // <J> -> not <I> | <I>
-bool J(tokenizer* t, Scope* scope) {
+Var_object* J(tokenizer* t, Scope* scope) {
 	std::cout << "J"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->value == "not")
@@ -332,29 +373,27 @@ bool J(tokenizer* t, Scope* scope) {
 }
 
 // <K> -> <J> and <K> | <J>
-bool K(tokenizer* t, Scope* scope) {
+Var_object* K(tokenizer* t, Scope* scope) {
 	std::cout << "K"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!J(t, scope))
-		return false;
+	Var_object* j = J(t, scope);
 	if(tokens.top()->value == "and") {
 		get_token(t);
-		return K(t, scope);
+		Var_object* k = K(t, scope);
 	}
-	return true;
+	return j;
 }
 
 // <exp> -> <K> or <exp> | <K> xor <exp> | <K>
-bool exp(tokenizer* t, Scope* scope) {
+Var_object* exp(tokenizer* t, Scope* scope) {
 	std::cout << "exp"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!K(t, scope))
-		return false;
+	Var_object* k =	K(t, scope);
 	if(tokens.top()->value == "or" || tokens.top()->value == "xor") {
 		get_token(t);
-		return exp(t, scope);
+		Var_object* expresssion = exp(t, scope);
 	}
-	return true;
+	return k;
 }
 
 // <argument_list> -> <exp>, <argument_list> | <epx>
