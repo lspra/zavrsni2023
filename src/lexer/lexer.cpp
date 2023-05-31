@@ -61,6 +61,14 @@ bool convertible(Var_object* from, Var_object* to) {
 	return from->type == string_type && to->type == string_type;
 }
 
+bool isint(data_types type) {
+	return type >= 0 && type <= 8;
+}
+
+bool isnumber(data_types type) {
+	return type >= 0 && type <= 11;
+}
+
 Variable* find_var(Token* var, std::vector<Variable*> variables) {
 
 	for(unsigned int i = 0; i < variables.size(); i++) {
@@ -216,10 +224,12 @@ Var_object* B(tokenizer* t, Scope* scope) {
 	std::cout << "B"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->value == "+" || tokens.top()->value == "-" || tokens.top()->value == "~") {
-		// TODO check if operator is defined on typeof A
 		get_token(t);
 	}
-	return A(t, scope);
+	Var_object* a = A(t, scope);
+	if(isint(a->type))
+		error_handle("operator not defined on not numbers");
+	return a;
 }
 
 // <C> -> <B> << <C> | <B> >> <C> | <B>
@@ -230,7 +240,8 @@ Var_object* C(tokenizer* t, Scope* scope) {
 	if(tokens.top()->value == "<<" || tokens.top()->value == ">>") {
 		get_token(t);
 		Var_object* c = C(t, scope);
-		// TODO check if b and c are int_type
+		if(!isint(b->type) || !isint(c->type))
+			error_handle("operator not defined on not integers");
 	}
 	return b;
 }
@@ -243,7 +254,8 @@ Var_object* D(tokenizer* t, Scope* scope) {
 	if(tokens.top()->value == "&") {
 		get_token(t);
 		Var_object* d = D(t, scope);
-		// TODO check if c and d are okey types
+		if(!isint(c->type) || !isint(d->type))
+			error_handle("operator not defined on not integers");
 	}
 	return c;
 }
@@ -256,7 +268,8 @@ Var_object* E(tokenizer* t, Scope* scope) {
 	if(tokens.top()->value == "|" || tokens.top()->value == "^") {
 		get_token(t);
 		Var_object* e = E(t, scope);
-		// TODO check types
+		if(!isint(d->type) || !isint(e->type))
+			error_handle("operator not defined on not integers");
 	}
 	return d;
 }
@@ -268,8 +281,9 @@ Var_object* F(tokenizer* t, Scope* scope) {
 	Var_object* e = E(t, scope);
 	if(tokens.top()->value == "*" || tokens.top()->value == "/" || tokens.top()->value == "%") {
 		get_token(t);
-		// TODO check types
 		Var_object* f = F(t, scope);
+		if(!isnumber(e->type) || !isnumber(f->type))
+			error_handle("operator not defined on not integers");
 	}
 	return e;
 }
@@ -281,8 +295,9 @@ Var_object* G(tokenizer* t, Scope* scope) {
 	Var_object* f = F(t, scope);
 	if(tokens.top()->value == "+" || tokens.top()->value == "-") {
 		get_token(t);
-		// TODO check types
 		Var_object* g = G(t, scope);
+		if(!isnumber(f->type) || !isnumber(g->type))
+			error_handle("operator not defined on not numbers");
 	}
 	return f;
 }
@@ -298,7 +313,8 @@ Var_object* H(tokenizer* t, Scope* scope) {
 	if(tokens.top()->type == OPERATOR_MODIFY) {
 		get_token(t);
 		Var_object* variable = Lvalue(t, scope);
-		// TODO check type
+		if(!isnumber(variable->type))
+			error_handle("operator not defined on not numbers.");
 		return variable;
 	}
 	if(tokens.top()->type == VAR) {
@@ -310,6 +326,7 @@ Var_object* H(tokenizer* t, Scope* scope) {
 			get_token(t);
 			if(tokens.top()->type == BRACKET_OPEN) {
 				get_token(t);
+				// TODO
 				if(!exp(t, scope))
 					error_handle("expression");
 				if(tokens.top()->type != BRACKET_CLOSE)
@@ -318,7 +335,8 @@ Var_object* H(tokenizer* t, Scope* scope) {
 			} else if(tokens.top()->type == INT || tokens.top()->type == FLOAT) {
 				get_token(t);
 			}
-			// TODO check type
+			if(!isnumber(variable->type))
+				error_handle("operator not defined on not numbers.");
 			return variable;
 		}
 		remove_stack_top(stack_top);
@@ -328,7 +346,6 @@ Var_object* H(tokenizer* t, Scope* scope) {
 	Var_object* expression;
 	if(tokens.top()->type == BRACKET_OPEN) {
 		get_token(t);
-		// TODO check if int/float type
 		expression = exp(t, scope);
 		if(tokens.top()->type != BRACKET_CLOSE)
 			error_handle(")");
@@ -339,12 +356,15 @@ Var_object* H(tokenizer* t, Scope* scope) {
 	}
 
 	if(tokens.top()->type != OPERATOR_MODIFY) {
+		if(!isnumber(expression->type))
+			error_handle("operator not defined on not numbers.");
 		remove_stack_top(stack_top);
 		return G(t, scope);
 	}
 	get_token(t);
-	// TODO check types
 	Var_object* variable = Lvalue(t, scope);
+	if(!isnumber(variable->type))
+		error_handle("operator not defined on not numbers.");
 	return variable;
 }
 
@@ -358,8 +378,8 @@ Var_object* I(tokenizer* t, Scope* scope) {
 		 tokens.top()->value == "<=" || tokens.top()->value == ">" || tokens.top()->value == ">=") {
 		get_token(t);
 		Var_object* h2 = H(t, scope);
+		return new Simple_Variable("", bool_type);
 	}
-	// TODO return type of bool
 	return h1;
 }
 
@@ -367,8 +387,11 @@ Var_object* I(tokenizer* t, Scope* scope) {
 Var_object* J(tokenizer* t, Scope* scope) {
 	std::cout << "J"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(tokens.top()->value == "not")
+	if(tokens.top()->value == "not") {
 		get_token(t);
+		Var_object* i = I(t, scope);
+		return new Simple_Variable("", bool_type);
+	}
 	return I(t, scope);
 }
 
@@ -380,6 +403,7 @@ Var_object* K(tokenizer* t, Scope* scope) {
 	if(tokens.top()->value == "and") {
 		get_token(t);
 		Var_object* k = K(t, scope);
+		return new Simple_Variable("", bool_type);
 	}
 	return j;
 }
@@ -392,6 +416,7 @@ Var_object* exp(tokenizer* t, Scope* scope) {
 	if(tokens.top()->value == "or" || tokens.top()->value == "xor") {
 		get_token(t);
 		Var_object* expresssion = exp(t, scope);
+		return new Simple_Variable("", bool_type);
 	}
 	return k;
 }
