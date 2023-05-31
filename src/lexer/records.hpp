@@ -30,6 +30,12 @@ class Variable {
 		data_types type;
 		virtual Variable* var_extend(tokenizer* t, Scope* scope) = 0;
 };
+
+class Var_object: public Variable {
+	public:
+		virtual Variable* var_extend(tokenizer* t, Scope* scope) = 0;
+};
+
 class Scope {
 	public:
 		std::vector <Variable*> variables;
@@ -65,10 +71,6 @@ class Class: public Variable {
 		virtual Variable* var_extend(tokenizer* t, Scope* scope);
 };
 
-class Var_object: public Variable {
-	public:
-		virtual Variable* var_extend(tokenizer* t, Scope* scope) = 0;
-};
 class Simple_Variable: public Var_object {
 	public:
 		Simple_Variable(std::string name_, data_types type_) {

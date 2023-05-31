@@ -6,15 +6,16 @@ std::stack<Token*> tokens;
 std::stack<Token*> temp_removed;
 Scope* global_scope;
 
+void remove_stack_top() {
+	temp_removed.push(tokens.top());
+	tokens.pop();
+}
+
 void remove_stack_top(int index) {
 	for(int i = tokens.size() - index; i > 0; i--)
 		remove_stack_top();
 }
 
-void remove_stack_top() {
-	temp_removed.push(tokens.top());
-	tokens.pop();
-}
 
 void get_token(tokenizer* t) {
 	if(temp_removed.size() != 0) {
