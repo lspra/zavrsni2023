@@ -34,14 +34,13 @@ void error_handle(std::string expected) {
 }
 
 data_types convert_to_type(Token* token) {
-	if(token->type != DATA_TYPE)
-		error_handle("cannot convert this");
 	if(token->type == INT)
 		return int32;
 	if(token->type == FLOAT)
 		return float32;
 	if(token->type == STRING)
 		return string_type;
+	error_handle("cannot convert this");
 }
 
 bool convertible(Var_object* from, Var_object* to) {
@@ -70,7 +69,6 @@ bool isnumber(data_types type) {
 }
 
 Variable* find_var(Token* var, std::vector<Variable*> variables) {
-
 	for(unsigned int i = 0; i < variables.size(); i++) {
 		if(variables[i]->name == var->value)
 			return variables[i];
@@ -144,29 +142,29 @@ Var_object* var(tokenizer* t, Scope* scope, bool* Lvalue) {
 		return nullptr;
 	Scope* cur_scope = scope;
 	Variable* variable = nullptr;
-	get_token(t);
-	while(scope != nullptr && variable != nullptr) {
-		if(tokens.top()->type != BRACKET_OPEN)
-			*Lvalue = false;
+	while(scope != nullptr && variable == nullptr) {
 		variable = find_var(tokens.top(), cur_scope->variables);
-		if(variable == nullptr)
+		if(variable == nullptr) 
 			cur_scope = cur_scope->parent_scope;
 	}
+	get_token(t);
 	if(variable == nullptr) {
 		error_handle("undefined variable error");
 	}
-	Variable* new_variable;
-	while(new_variable != variable) {
+	Variable* new_variable = variable;
+	do {
+		if(tokens.top()->type == BRACKET_OPEN)
+			*Lvalue = false;
 		variable = new_variable;
 		new_variable = variable->var_extend(t, scope);
-	}
+	} while(new_variable != variable);
 	if(new_variable->type == class_ || new_variable->type == function_)
 		error_handle("variable");
 	return (Var_object*) new_variable;
 }
 
 Var_object* Lvalue(tokenizer* t, Scope* scope) {
-	bool lvalue;
+	bool lvalue = true;
 	Var_object* variable = var(t, scope, &lvalue);
 	if(!lvalue || variable->type == -1)
 		error_handle("defined Lvalue");
@@ -185,14 +183,15 @@ Var_object* A(tokenizer* t, Scope* scope) {
 		if (tokens.top()->value == "=") {
 			Variable* variable = find_var(var_token, scope->variables);
 			if (variable == nullptr) {
+				get_token(t);
 				exp(t, scope); // get type
 				Simple_Variable* variable = new Simple_Variable(var_token->value, bool_type);
 				scope->variables.push_back(variable);
 				return variable;
 			}
-			remove_stack_top();
 		}
-		bool lvalue;
+		remove_stack_top();
+		bool lvalue = true;
 		Var_object* variable = var(t, scope, &lvalue);
 		if (tokens.top()->value == "=") {
 			if(!lvalue)
@@ -200,11 +199,10 @@ Var_object* A(tokenizer* t, Scope* scope) {
 			get_token(t);
 			// TODO get type from exp and check if it is same type
 			Var_object* expression = exp(t, scope);
-			if(convertible(expression, variable))
-				return variable;
-			else
+			if(!convertible(expression, variable))
 				error_handle("Cannot convert one type to another");
 		}
+		return variable;
 	} 
 	if(tokens.top()->type == BRACKET_OPEN) {
 		get_token(t);
@@ -214,8 +212,11 @@ Var_object* A(tokenizer* t, Scope* scope) {
 		get_token(t);
 		return expression;
 	} 
-	if(tokens.top()->type == INT || tokens.top()->type == FLOAT || tokens.top()->type == STRING) 
-		return new Simple_Variable("", convert_to_type(tokens.top()));
+	if(tokens.top()->type == INT || tokens.top()->type == FLOAT || tokens.top()->type == STRING) {
+		Token* value = tokens.top();
+		get_token(t);
+		return new Simple_Variable("", convert_to_type(value));
+	}
 	error_handle("not okay");
 }
 
@@ -223,11 +224,13 @@ Var_object* A(tokenizer* t, Scope* scope) {
 Var_object* B(tokenizer* t, Scope* scope) {
 	std::cout << "B"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
+	bool operator_ = false;
 	if(tokens.top()->value == "+" || tokens.top()->value == "-" || tokens.top()->value == "~") {
 		get_token(t);
+		operator_ = true;
 	}
 	Var_object* a = A(t, scope);
-	if(isint(a->type))
+	if(operator_ && isint(a->type))
 		error_handle("operator not defined on not numbers");
 	return a;
 }
@@ -318,7 +321,7 @@ Var_object* H(tokenizer* t, Scope* scope) {
 		return variable;
 	}
 	if(tokens.top()->type == VAR) {
-		bool lvalue;
+		bool lvalue = true;
 		Var_object* variable = var(t, scope, &lvalue);
 		if(tokens.top()->type == OPERATOR_MODIFY) {
 			if(!lvalue)
@@ -603,8 +606,10 @@ void command(tokenizer* t, Scope* scope) {
 			loop_command(t);
 		else if(tokens.top()->type == VAR) {
 			int stack_top = tokens.size();
-			if(!decl_command(t, scope)) 
+			if(!decl_command(t, scope)) {
 				remove_stack_top(stack_top);
+				exp(t, scope);
+			}
 		}
 		if(tokens.top()->type != SEMICOLON)
 			error_handle("command");
