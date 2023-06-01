@@ -33,6 +33,37 @@ void error_handle(std::string expected) {
 	exit(1);
 }
 
+data_types get_type_from_decl(Token* token) {
+	if(token->value == "bool")
+		return bool_type;
+	if(token->value == "int8")
+		return int8;
+	if(token->value == "int16")
+		return int16;
+	if(token->value == "int32")
+		return int32;
+	if(token->value == "int64")
+		return int64;
+	if(token->value == "uint8")
+		return uint8;
+	if(token->value == "uint16")
+		return uint16;
+	if(token->value == "uint32")
+		return uint32;
+	if(token->value == "uint64")
+		return uint64;
+	if(token->value == "float32")
+		return float32;
+	if(token->value == "float64")
+		return float64;
+	if(token->value == "float96")
+		return float96;
+	if(token->value == "string")
+		return string_type;
+	// this shouldn't be possible
+	return undefined;
+}
+
 data_types convert_to_type(Token* token) {
 	if(token->type == INT)
 		return int32;
@@ -89,7 +120,7 @@ Variable* Function::var_extend (tokenizer* t, Scope* scope)
 {
 	if (tokens.top()->type == BRACKET_OPEN) {
 		get_token(t);
-		arguments(t, scope);
+		arguments(t, scope, &function_parameters);
 		if(tokens.top()->type != BRACKET_CLOSE)
 			error_handle(")");
 	} else {
@@ -133,8 +164,7 @@ Variable* array::var_extend (tokenizer* t, Scope* scope) {
 
 // <var> -> var <var_extend> <var>
 // returns Variable/Function/Class pointer if this is already initialised varible/function
-// returns nullptr if there is an error
-// returns Variable with type -1 if varible/class/function is not initialised
+// returns nullptr if varible/class/function is not initialised
 Var_object* var(tokenizer* t, Scope* scope, bool* Lvalue) {
 	std::cout << "var"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
@@ -166,7 +196,7 @@ Var_object* var(tokenizer* t, Scope* scope, bool* Lvalue) {
 Var_object* Lvalue(tokenizer* t, Scope* scope) {
 	bool lvalue = true;
 	Var_object* variable = var(t, scope, &lvalue);
-	if(!lvalue || variable->type == -1)
+	if(!lvalue || variable == nullptr)
 		error_handle("defined Lvalue");
 	return variable;
 }
@@ -184,8 +214,12 @@ Var_object* A(tokenizer* t, Scope* scope) {
 			Variable* variable = find_var(var_token, scope->variables);
 			if (variable == nullptr) {
 				get_token(t);
-				exp(t, scope); // get type
-				Simple_Variable* variable = new Simple_Variable(var_token->value, bool_type);
+				Var_object* expression = exp(t, scope);
+				Var_object* variable;
+				if(expression->type == class_instance)
+					variable = new Class_instance(var_token->value, ((Class_instance*) expression)->class_type);
+				else
+					variable = new Simple_Variable(var_token->value, expression->type);
 				scope->variables.push_back(variable);
 				return variable;
 			}
@@ -197,13 +231,12 @@ Var_object* A(tokenizer* t, Scope* scope) {
 			if(!lvalue)
 				error_handle("Lvalue");
 			get_token(t);
-			// TODO get type from exp and check if it is same type
 			Var_object* expression = exp(t, scope);
 			if(!convertible(expression, variable))
 				error_handle("Cannot convert one type to another");
 		}
 		return variable;
-	} 
+	}
 	if(tokens.top()->type == BRACKET_OPEN) {
 		get_token(t);
 		Var_object* expression = exp(t, scope);
@@ -329,9 +362,8 @@ Var_object* H(tokenizer* t, Scope* scope) {
 			get_token(t);
 			if(tokens.top()->type == BRACKET_OPEN) {
 				get_token(t);
-				// TODO
-				if(!exp(t, scope))
-					error_handle("expression");
+				if(!isnumber(exp(t, scope)->type))
+					error_handle("number");
 				if(tokens.top()->type != BRACKET_CLOSE)
 					error_handle(")");
 				get_token(t);
@@ -425,42 +457,45 @@ Var_object* exp(tokenizer* t, Scope* scope) {
 }
 
 // <argument_list> -> <exp>, <argument_list> | <epx>
-void argument_list(tokenizer* t, Scope* scope) {
+void argument_list(tokenizer* t, Scope* scope, std::vector<Var_object*> *arguments_vector, int index) {
 	std::cout << "argument list"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!exp(t, scope))
-		error_handle("expression");
+	if(!convertible(exp(t, scope), (*arguments_vector)[index]))
+		error_handle("wrong argument type");
 	if(tokens.top()->type == COMMA) {
 		get_token(t);
-		argument_list(t, scope);
-	}
+		if(index + 1 == arguments_vector->size())
+			error_handle("too many arguments");
+		argument_list(t, scope, arguments_vector, index + 1);
+	} else if(index + 1 != arguments_vector->size())
+		error_handle("too few arguments");
 }
 
 // <arguments> -> <argument_list> | $
-// TODO add checking if this are correct argument types and amount
-void arguments(tokenizer* t, Scope* scope) {
+void arguments(tokenizer* t, Scope* scope, std::vector<Var_object*> *arguments_vector) {
 	std::cout << "arguments"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != BRACKET_CLOSE)
-		argument_list(t, scope);
+		argument_list(t, scope, arguments_vector, 0);
 }
 
 // <decl_command> -> var = data_type
+// TODO polja - probably not just here
 bool decl_command(tokenizer* t, Scope* scope) {
 	std::cout << "decl command"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
 		return false;
 	Token* var = tokens.top();
+	if(find_var(var, scope->variables) != nullptr)
+		return false;
 	get_token(t);
 	if(tokens.top()->value != "=")
 		return false;
 	get_token(t);
-	// TODO ovo moze biti i class
 	if(tokens.top()->type != DATA_TYPE)
 		return false;
-	Simple_Variable* variable = new Simple_Variable(var->value, bool_type);
-	// var.type = data_types.index(tokens.top()->value);
+	Simple_Variable* variable = new Simple_Variable(var->value, get_type_from_decl(tokens.top()));
 	scope->variables.push_back(variable);
 	get_token(t);
 	return true;
@@ -646,10 +681,9 @@ void block_commands(tokenizer* t, Scope* scope) {
 void func_arguments_list(tokenizer* t, Function* function) {
 	std::cout << "func arguments list"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	// TODO check if this function already has this argument
 	if(!decl_command(t, function->function_scope))
 		error_handle("argument");
-	function->function_parameters.push_back(function->function_scope->variables.back());
+	function->function_parameters.push_back((Var_object*) function->function_scope->variables.back());
 	if(tokens.top()->type == COMMA) {
 		get_token(t);
 		func_arguments_list(t, function);
@@ -674,8 +708,7 @@ void return_type(tokenizer* t, Function* function) {
 	get_token(t);
 	if(tokens.top()->type != DATA_TYPE)
 		error_handle("return type");
-	function->return_object = new Simple_Variable("", bool_type);
-	// function.type = data_types.index(tokens.top()->value);
+	function->return_object = new Simple_Variable("", get_type_from_decl(tokens.top()));
 	get_token(t);
 }
 
@@ -694,7 +727,8 @@ void function(tokenizer* t, Scope* scope) {
 	get_token(t);
 	return_type(t, function);
 	block_commands(t, function->function_scope);
-	// TODO check if function with this name and arguments already exists
+	if (find_var(tokens.top(), scope->variables) != nullptr)
+		error_handle("already defined");
 	scope->variables.push_back(function);
 }
 

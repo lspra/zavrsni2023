@@ -46,7 +46,7 @@ class Function: public Variable {
 	public:
 		Var_object* return_object;
 		Scope* function_scope;
-		std::vector <Variable* > function_parameters;
+		std::vector <Var_object* > function_parameters;
 		Function(std::string name_, Scope* scope, Var_object* return_object_): function_scope(scope) {
 			name = name_;
 			type = function_;
