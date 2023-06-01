@@ -172,15 +172,14 @@ Var_object* var(tokenizer* t, Scope* scope, bool* Lvalue) {
 		return nullptr;
 	Scope* cur_scope = scope;
 	Variable* variable = nullptr;
-	while(scope != nullptr && variable == nullptr) {
+	while(cur_scope != nullptr && variable == nullptr) {
 		variable = find_var(tokens.top(), cur_scope->variables);
 		if(variable == nullptr) 
 			cur_scope = cur_scope->parent_scope;
 	}
 	get_token(t);
-	if(variable == nullptr) {
-		error_handle("undefined variable error");
-	}
+	if(variable == nullptr) 
+		return nullptr;	
 	Variable* new_variable = variable;
 	do {
 		if(tokens.top()->type == BRACKET_OPEN)
@@ -263,8 +262,9 @@ Var_object* B(tokenizer* t, Scope* scope) {
 		operator_ = true;
 	}
 	Var_object* a = A(t, scope);
-	if(operator_ && isint(a->type))
+	if(operator_ && !isnumber(a->type)){
 		error_handle("operator not defined on not numbers");
+	}
 	return a;
 }
 
@@ -357,8 +357,8 @@ Var_object* H(tokenizer* t, Scope* scope) {
 		bool lvalue = true;
 		Var_object* variable = var(t, scope, &lvalue);
 		if(tokens.top()->type == OPERATOR_MODIFY) {
-			if(!lvalue)
-				error_handle("Lvalue");
+			if(variable == nullptr || !lvalue)
+				error_handle("defined Lvalue");
 			get_token(t);
 			if(tokens.top()->type == BRACKET_OPEN) {
 				get_token(t);
@@ -388,6 +388,8 @@ Var_object* H(tokenizer* t, Scope* scope) {
 	} else if(tokens.top()->type == INT || tokens.top()->type == FLOAT) {
 		expression = new Simple_Variable("", convert_to_type(tokens.top()));
 		get_token(t);
+	} else {
+		return G(t, scope);
 	}
 
 	if(tokens.top()->type != OPERATOR_MODIFY) {
@@ -716,8 +718,9 @@ void return_type(tokenizer* t, Function* function) {
 void function(tokenizer* t, Scope* scope) {
 	std::cout << "function"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
+	Variable* func = find_var(tokens.top(), scope->variables);
+	Function* function = new Function(tokens.top()->value, new Scope(scope));
 	get_token(t);
-	Function* function = new Function(tokens.top()->value, scope);
 	if(tokens.top()->type != BRACKET_OPEN)
 		error_handle("(");
 	get_token(t);
@@ -727,9 +730,19 @@ void function(tokenizer* t, Scope* scope) {
 	get_token(t);
 	return_type(t, function);
 	block_commands(t, function->function_scope);
-	if (find_var(tokens.top(), scope->variables) != nullptr)
-		error_handle("already defined");
-	scope->variables.push_back(function);
+	if (func == nullptr) {
+		scope->variables.push_back(function);
+		return;
+	}
+	if(func->type == class_) {
+		Class *cl = (Class*) func;
+		if(cl->class_scope == scope && cl->constructor == nullptr) {
+			cl->constructor = function;
+			function->return_object = new Class_instance("", cl);
+			return;
+		}
+	}
+	error_handle("already defined");
 }
 
 // <base_list> -> var, <base_list> | var
@@ -789,23 +802,23 @@ void class_body(tokenizer* t, Scope* scope) {
 }
 
 // <class_decl> -> class var <base_classes> {<class_body>}
-Class class_decl(tokenizer* t, Scope* scope) {
+void class_decl(tokenizer* t, Scope* scope) {
 	std::cout << "class decl"  << std::endl;
 	get_token(t);
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
 		error_handle("class name");
-	Class class_(tokens.top()->value, scope);
+	Class *c = new Class(tokens.top()->value, scope);
+	scope->variables.push_back(c);
 	get_token(t);
-	base_classes(t, class_.class_scope);
+	base_classes(t, c->class_scope);
 	if(tokens.top()->type != CURLY_OPEN)
 		error_handle("{");
 	get_token(t);
-	class_body(t, class_.class_scope);
+	class_body(t, c->class_scope);
 	if(tokens.top()->type != CURLY_CLOSE)
 		error_handle("}");
 	get_token(t);
-	return class_;
 }
 
 // <program_parts> -> <class_decl> <program_parts> | <function> <program_parts>
