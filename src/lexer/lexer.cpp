@@ -165,17 +165,36 @@ Variable* Var_object::var_extend (tokenizer* t, Scope* scope) {
 	return nullptr;
 }
 
-// <var_extend> -> [<exp>] <var_extend>
-Variable* array::var_extend (tokenizer* t, Scope* scope) {
-	if(tokens.top()->type == SQUARE_OPEN) {
-		get_token(t);
-		exp(t, scope);
-		if(tokens.top()->type != SQUARE_CLOSE)
-			error_handle("]");
-	} else
+Variable* Array::var_extend (tokenizer* t, Scope* scope) {
+	return new Array_element(this, nullptr, nullptr);
+}
+
+// <var_extend> -> [<exp>] <var_extend> || [<exp>:<exp>] <var_extend> || [:<exp>] <var_extend> || [<exp>:] <var_extend> || [:] <var_extend>
+Variable* Array_element::var_extend(tokenizer* t, Scope* scope) {
+	if(tokens.top()->type != BRACKET_OPEN)
 		return this;
 	get_token(t);
-	return new array(name, dimension - 1, size);
+	Var_object* begin;
+	if(tokens.top()->type == COLON)
+		begin = nullptr;
+	else
+		begin = exp(t, scope);
+	
+	if(tokens.top()->type == BRACKET_CLOSE)
+		return new Array_element(this, begin, begin);
+	else if(tokens.top()->type == COLON)
+		get_token(t);
+	else
+		error_handle("]");
+
+	if(tokens.top()->type == BRACKET_CLOSE)
+		return new Array_element(this, begin, nullptr);
+
+	Var_object* end = exp(t, scope);
+	if(tokens.top()->type != BRACKET_CLOSE)
+		error_handle("]");
+	return new Array_element(this, begin, end);
+
 }
 
 // <var> -> var <var_extend> <var>
@@ -494,15 +513,27 @@ bool decl_command(tokenizer* t, Scope* scope) {
 	if(tokens.top()->type == DATA_TYPE) {
 		variable = new Var_object(var->name, get_type_from_decl(tokens.top()));
 		get_token(t);
+		if(tokens.top()->type != BRACKET_OPEN) {
+			scope->variables.push_back(variable);
+			return true;
+		}
+		std::vector<Var_object*> sizes;
+		while (tokens.top()->type == BRACKET_OPEN) {
+			sizes.push_back(exp(t, scope));
+			if(tokens.top()->type != BRACKET_CLOSE)
+				error_handle("]");
+			get_token(t);
+		}
+		Array* arr = new Array(var->name, sizes, variable);
+		scope->variables.push_back(arr);
+		return true;
 	}
-	else {
-		// var = <exp>
-		Var_object* expression = exp(t, scope);
-		variable = (Var_object*) var;
-		variable->type = expression->type;
-		if(expression->type == class_instance)
-			variable->class_type = expression->class_type;
-	}
+	// var = <exp>
+	Var_object* expression = exp(t, scope);
+	variable = (Var_object*) var;
+	variable->type = expression->type;
+	if(expression->type == class_instance)
+		variable->class_type = expression->class_type;
 	scope->variables.push_back(variable);
 	return true;
 }
