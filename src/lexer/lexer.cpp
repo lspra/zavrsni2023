@@ -171,7 +171,7 @@ Variable* Array::var_extend (tokenizer* t, Scope* scope) {
 
 // <var_extend> -> [<exp>] <var_extend> || [<exp>:<exp>] <var_extend> || [:<exp>] <var_extend> || [<exp>:] <var_extend> || [:] <var_extend>
 Variable* Array_element::var_extend(tokenizer* t, Scope* scope) {
-	if(tokens.top()->type != BRACKET_OPEN)
+	if(tokens.top()->type != SQUARE_OPEN)
 		return this;
 	get_token(t);
 	Var_object* begin;
@@ -180,21 +180,25 @@ Variable* Array_element::var_extend(tokenizer* t, Scope* scope) {
 	else
 		begin = exp(t, scope);
 	
-	if(tokens.top()->type == BRACKET_CLOSE)
+	if(tokens.top()->type == SQUARE_CLOSE) {
+		get_token(t);
 		return new Array_element(this, begin, begin);
+	}
 	else if(tokens.top()->type == COLON)
 		get_token(t);
 	else
 		error_handle("]");
 
-	if(tokens.top()->type == BRACKET_CLOSE)
+	if(tokens.top()->type == SQUARE_CLOSE) {
+		get_token(t);
 		return new Array_element(this, begin, nullptr);
+	}
 
 	Var_object* end = exp(t, scope);
-	if(tokens.top()->type != BRACKET_CLOSE)
+	if(tokens.top()->type != SQUARE_CLOSE)
 		error_handle("]");
+	get_token(t);
 	return new Array_element(this, begin, end);
-
 }
 
 // <var> -> var <var_extend> <var>
@@ -513,14 +517,15 @@ bool decl_command(tokenizer* t, Scope* scope) {
 	if(tokens.top()->type == DATA_TYPE) {
 		variable = new Var_object(var->name, get_type_from_decl(tokens.top()));
 		get_token(t);
-		if(tokens.top()->type != BRACKET_OPEN) {
+		if(tokens.top()->type != SQUARE_OPEN) {
 			scope->variables.push_back(variable);
 			return true;
 		}
 		std::vector<Var_object*> sizes;
-		while (tokens.top()->type == BRACKET_OPEN) {
+		while (tokens.top()->type == SQUARE_OPEN) {
+			get_token(t);
 			sizes.push_back(exp(t, scope));
-			if(tokens.top()->type != BRACKET_CLOSE)
+			if(tokens.top()->type != SQUARE_CLOSE)
 				error_handle("]");
 			get_token(t);
 		}
@@ -684,7 +689,7 @@ void command(tokenizer* t, Scope* scope) {
 			}
 		}
 		if(tokens.top()->type != SEMICOLON)
-			error_handle("command");
+			error_handle("command - ;");
 		get_token(t);
 	}
 }

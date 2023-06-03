@@ -81,10 +81,11 @@ class Array: public Variable {
 	public:
 		std::vector<Var_object*> size;
 		Var_object* containing_type;
-		Array(std::string name, std::vector<Var_object*> size_, Var_object* type) {
+		Array(std::string name_, std::vector<Var_object*> size_, Var_object* type) {
+			name = name_;
 			containing_type = type;
 			for(size_t i = 0; i < size_.size(); i++)
-				this->size[i] = size_[i];
+				this->size.push_back(size_[i]);
 		}
 		virtual Variable* var_extend(tokenizer* t, Scope* scope);
 };
