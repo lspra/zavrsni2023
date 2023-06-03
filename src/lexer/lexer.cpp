@@ -5,6 +5,7 @@
 std::stack<Token*> tokens;
 std::stack<Token*> temp_removed;
 Scope* global_scope;
+Function* curr_function;
 
 void remove_stack_top() {
 	temp_removed.push(tokens.top());
@@ -33,15 +34,19 @@ void error_handle(std::string expected) {
 	exit(1);
 }
 
+bool isint(data_types type) {
+	return type >= 0 && type <= 8;
+}
+
 void Array_element::add_begin(Var_object* begin) {
-	if(begin_index.size() + 1 >= array_->size.size())
+	if(begin_index.size() + 1 > array_->size.size())
 		error_handle("index out of bound");
 	if(!isint(begin->type))
 		error_handle("index not integer");
 	begin_index.push_back(begin);
 }
 void Array_element::add_end(Var_object* end) {
-	if(end_index.size() + 1 >= array_->size.size())
+	if(end_index.size() + 1 > array_->size.size())
 		error_handle("index out of bound");
 	if(!isint(end->type))
 		error_handle("index not integer");
@@ -119,9 +124,6 @@ bool convertible(Var_object* from, Var_object* to) {
 	return from->type == string_type && to->type == string_type;
 }
 
-bool isint(data_types type) {
-	return type >= 0 && type <= 8;
-}
 
 bool isnumber(data_types type) {
 	return type >= 0 && type <= 11;
@@ -228,6 +230,7 @@ Variable* Array_element::var_extend(tokenizer* t, Scope* scope) {
 		ar_el->add_begin(begin);
 		ar_el->add_end(end);
 	}
+	return ar_el;
 }
 
 // <var> -> var <var_extend> <var>
@@ -249,7 +252,7 @@ Var_object* var(tokenizer* t, Scope* scope, bool* Lvalue) {
 		variable = new_variable;
 		new_variable = variable->var_extend(t, scope);
 	} while(new_variable != nullptr && new_variable != variable);
-	if(new_variable != nullptr && (new_variable->type == class_ || new_variable->type == function_))
+	if(new_variable == nullptr || (new_variable->type == class_ || new_variable->type == function_))
 		error_handle("variable");
 	return (Var_object*) new_variable;
 }
@@ -527,7 +530,6 @@ void arguments(tokenizer* t, Scope* scope, std::vector<Var_object*> *arguments_v
 }
 
 // <decl_command> -> var = data_type
-// TODO polja - probably not just here
 bool decl_command(tokenizer* t, Scope* scope) {
 	std::cout << "decl command"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
@@ -565,9 +567,19 @@ bool decl_command(tokenizer* t, Scope* scope) {
 	// var = <exp>
 	Var_object* expression = exp(t, scope);
 	variable = (Var_object*) var;
+	std::cout << (expression == nullptr) << std::endl;
+	std::cout << expression->type << std::endl;
 	variable->type = expression->type;
 	if(expression->type == class_instance)
 		variable->class_type = expression->class_type;
+	if(expression->type == array_element) {
+		Array_element* ar_el = (Array_element*) expression;
+		if(!ar_el->is_one_element())
+			error_handle("cannot copy array elements");
+		expression->type == ar_el->array_->containing_type->type;
+		if(expression->type == class_instance)
+			expression->class_type = ar_el->array_->containing_type->class_type;
+	}
 	scope->variables.push_back(variable);
 	return true;
 }
@@ -581,8 +593,7 @@ void if_command(tokenizer* t, Scope* scope) {
 	if(tokens.top()->type != BRACKET_OPEN)
 		error_handle("(");
 	get_token(t);
-	if(!exp(t, if_scope))
-		error_handle("expression");
+	exp(t, if_scope);
 	if(tokens.top()->type != BRACKET_CLOSE)
 		error_handle(")");
 	get_token(t);
@@ -607,19 +618,16 @@ void for_command(tokenizer* t, Scope* scope) {
 	int stack_top = tokens.size();
 	if(!decl_command(t, for_scope)) {
 		remove_stack_top(stack_top);
-		if(!exp(t, for_scope))
-			error_handle("command");
+		exp(t, for_scope);
 	}
 	if(tokens.top()->type != SEMICOLON)
 		error_handle(";");
 	get_token(t);
-	if(!exp(t, for_scope))
-		error_handle("expression");
+	exp(t, for_scope);
 	if(tokens.top()->type != SEMICOLON)
 		error_handle(";");
 	get_token(t);
-	if(!exp(t, for_scope))
-		error_handle("command");
+	exp(t, for_scope);
 	if(tokens.top()->type != BRACKET_CLOSE)
 		error_handle(")");
 	get_token(t);
@@ -635,8 +643,7 @@ void while_command(tokenizer* t, Scope* scope) {
 	if(tokens.top()->type != BRACKET_OPEN)
 		error_handle("(");
 	get_token(t);
-	if(!exp(t, while_scope))
-		error_handle("expression");
+	exp(t, while_scope);
 	get_token(t);
 	if(tokens.top()->type != BRACKET_CLOSE)
 		error_handle(")");
@@ -666,8 +673,7 @@ void print_command(tokenizer* t, Scope* scope) {
 	if(tokens.top()->type != BRACKET_OPEN)
 		error_handle("(");
 	get_token(t);
-	if(!exp(t, scope))
-		error_handle("expression");
+	exp(t, scope);
 	if(tokens.top()->type != BRACKET_CLOSE)
 		error_handle(")");
 	get_token(t);
@@ -678,10 +684,12 @@ void return_command(tokenizer* t, Scope* scope) {
 	std::cout << "return command"  << std::endl;
 	get_token(t);
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
+	Var_object* ret;
 	if(tokens.top()->type != SEMICOLON) {
-		if(!exp(t, scope))
-			error_handle("expression");
+		ret = exp(t, scope);
 	}
+	if(!convertible(ret, curr_function->return_object))
+		error_handle("cannot convert");
 }
 
 // <loop_command> -> break | continue
@@ -792,6 +800,7 @@ void function(tokenizer* t, Scope* scope) {
 		error_handle("already defined");
 	Token* var_name = tokens.top();
 	Function* function = new Function(tokens.top()->value, new Scope(scope));
+	curr_function = function;
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
 		error_handle("(");
@@ -817,6 +826,7 @@ void function(tokenizer* t, Scope* scope) {
 			error_handle("something wrong, should analyze");
 	}
 	scope->variables.push_back(function);
+	curr_function = nullptr;
 }
 
 // <base_list> -> var, <base_list> | var
