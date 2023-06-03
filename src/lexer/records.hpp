@@ -84,31 +84,39 @@ class Array: public Variable {
 		Array(std::string name_, std::vector<Var_object*> size_, Var_object* type) {
 			name = name_;
 			containing_type = type;
-			for(size_t i = 0; i < size_.size(); i++)
+			for(size_t i = 0; i < size_.size(); i++) {
 				this->size.push_back(size_[i]);
+			}
 		}
 		virtual Variable* var_extend(tokenizer* t, Scope* scope);
 };
 
 class Array_element: public Var_object {
-	public:
-		Array* array_;
+	private:
 		std::vector<Var_object*> begin_index;
 		std::vector<Var_object*> end_index;
+	public:
+		void add_begin(Var_object* begin);
+		void add_end(Var_object* end);
+		Array* array_;
 		// TODO check if begin and end index valid
-		Array_element(Array* arr, Var_object* begin, Var_object* end) : Var_object(arr->name, array_element) {
-			array_ = arr;
-			begin_index.push_back(begin);
-			end_index.push_back(end);
-		}
-		Array_element(Array_element* arr, Var_object* begin, Var_object* end): Var_object(arr->name, array_element) {
+		Array_element(Array_element* arr): Var_object(arr->name, array_element) {
 			array_ = arr->array_;
 			// optimize
 			begin_index = arr->begin_index;
-			begin_index.push_back(begin);
 			end_index = arr->end_index;
-			end_index.push_back(end);
+		}
+		Array_element(Array* arr): Var_object(arr->name, array_element) {
+			array_ = arr;
 		}
 		virtual Variable* var_extend(tokenizer* t, Scope* scope);
-
+		bool is_one_element() {
+			if(begin_index.size() < array_->size.size())
+				return false;
+			for(int i = 0; i < begin_index.size(); i++) {
+				if(begin_index[i] != end_index[i])
+					return false;
+			}
+			return true;
+		}
 };

@@ -33,6 +33,21 @@ void error_handle(std::string expected) {
 	exit(1);
 }
 
+void Array_element::add_begin(Var_object* begin) {
+	if(begin_index.size() + 1 >= array_->size.size())
+		error_handle("index out of bound");
+	if(!isint(begin->type))
+		error_handle("index not integer");
+	begin_index.push_back(begin);
+}
+void Array_element::add_end(Var_object* end) {
+	if(end_index.size() + 1 >= array_->size.size())
+		error_handle("index out of bound");
+	if(!isint(end->type))
+		error_handle("index not integer");
+	end_index.push_back(end);
+}
+
 data_types get_type_from_decl(Token* token) {
 	if(token->value == "bool")
 		return bool_type;
@@ -80,6 +95,20 @@ bool convertible(Var_object* from, Var_object* to) {
 		if(from->type != class_instance)
 			return false;
 		return from->class_type->base_classes.contains(to->class_type);
+	}
+	if(to->type == array_element) {
+		Array_element* to_array = (Array_element*) to;
+		if(to_array->is_one_element())
+			return convertible(from, to_array->array_->containing_type);
+		// TODO this could still work with many checks
+		return false;
+	}
+	if(from->type == array_element) {
+		Array_element* from_array = (Array_element*) from;
+		if(from_array->is_one_element())
+			return convertible(from_array->array_->containing_type, to);
+		// TODO this could still work with many checks
+		return false;
 	}
 	if(from->type == to->type)
 		return true;
@@ -166,39 +195,39 @@ Variable* Var_object::var_extend (tokenizer* t, Scope* scope) {
 }
 
 Variable* Array::var_extend (tokenizer* t, Scope* scope) {
-	return new Array_element(this, nullptr, nullptr);
+	return (new Array_element(this))->var_extend(t, scope);
 }
 
 // <var_extend> -> [<exp>] <var_extend> || [<exp>:<exp>] <var_extend> || [:<exp>] <var_extend> || [<exp>:] <var_extend> || [:] <var_extend>
 Variable* Array_element::var_extend(tokenizer* t, Scope* scope) {
 	if(tokens.top()->type != SQUARE_OPEN)
 		return this;
-	get_token(t);
-	Var_object* begin;
-	if(tokens.top()->type == COLON)
-		begin = nullptr;
-	else
-		begin = exp(t, scope);
-	
-	if(tokens.top()->type == SQUARE_CLOSE) {
+	Array_element* ar_el = new Array_element(this);
+	while(tokens.top()->type == SQUARE_OPEN) {
 		get_token(t);
-		return new Array_element(this, begin, begin);
-	}
-	else if(tokens.top()->type == COLON)
-		get_token(t);
-	else
-		error_handle("]");
+		Var_object* begin;
+		Var_object* end;
+		if(tokens.top()->type == COLON)
+			begin = nullptr;
+		else
+			begin = exp(t, scope);
+		
+		if(tokens.top()->type == SQUARE_CLOSE)
+			end = begin;
+		else if(tokens.top()->type == COLON) {
+			get_token(t);
+			if(tokens.top()->type == SQUARE_CLOSE)
+				end = nullptr;
+			else
+				Var_object* end = exp(t, scope);
+		}
+		if(tokens.top()->type != SQUARE_CLOSE)
+			error_handle("]");
+			get_token(t);
 
-	if(tokens.top()->type == SQUARE_CLOSE) {
-		get_token(t);
-		return new Array_element(this, begin, nullptr);
+		ar_el->add_begin(begin);
+		ar_el->add_end(end);
 	}
-
-	Var_object* end = exp(t, scope);
-	if(tokens.top()->type != SQUARE_CLOSE)
-		error_handle("]");
-	get_token(t);
-	return new Array_element(this, begin, end);
 }
 
 // <var> -> var <var_extend> <var>
