@@ -19,23 +19,18 @@ enum data_types {
 	string_type,
 	class_,
 	function_,
-	class_instance
+	class_instance,
+	array_
 };
 
 class Scope;
-
+class Var_object;
 class Variable {
 	public:
 		std::string name;
 		data_types type;
 		virtual Variable* var_extend(tokenizer* t, Scope* scope) = 0;
 };
-
-class Var_object: public Variable {
-	public:
-		virtual Variable* var_extend(tokenizer* t, Scope* scope) = 0;
-};
-
 class Scope {
 	public:
 		std::vector <Variable*> variables;
@@ -71,23 +66,13 @@ class Class: public Variable {
 		}
 		virtual Variable* var_extend(tokenizer* t, Scope* scope);
 };
-
-class Simple_Variable: public Var_object {
-	public:
-		Simple_Variable(std::string name_, data_types type_) {
-			this->name = name_;
-			this->type = type_;
-		}
-		virtual Variable* var_extend(tokenizer* t, Scope* scope) {
-			return this;
-		}
-};
-class Class_instance: public Var_object {
+class Var_object: public Variable {
 	public:
 		Class* class_type;
-		Class_instance(std::string name_, Class* class_): class_type(class_) {
+		Var_object(std::string name_, data_types type_) {
 			this->name = name_;
-			type = class_instance;
+			type = type_;
+			class_type = nullptr;
 		}
 		virtual Variable* var_extend(tokenizer* t, Scope* scope);
 };

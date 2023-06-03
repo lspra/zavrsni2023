@@ -72,15 +72,14 @@ data_types convert_to_type(Token* token) {
 	if(token->type == STRING)
 		return string_type;
 	error_handle("cannot convert this");
+	return undefined;
 }
 
 bool convertible(Var_object* from, Var_object* to) {
 	if(to->type == class_instance) {
 		if(from->type != class_instance)
 			return false;
-		Class_instance* from_class = (Class_instance*) from;
-		Class_instance* to_class = (Class_instance*) to;
-		return from_class->class_type->base_classes.contains(to_class->class_type);
+		return from->class_type->base_classes.contains(to->class_type);
 	}
 	if(from->type == to->type)
 		return true;
@@ -111,7 +110,9 @@ Variable* find_var(Token* var, std::vector<Variable*> variables) {
 Variable* Class::var_extend (tokenizer* t, Scope* scope) {
 	if(constructor != nullptr)
 		return constructor->var_extend(t, scope);
-	constructor = new Function(this->name, this->class_scope, new Class_instance("", this));
+	Var_object* cl_instance = new Var_object("", class_instance);
+	cl_instance->class_type = this;
+	constructor = new Function(this->name, this->class_scope, cl_instance);
 	return constructor;
 }
 
@@ -131,7 +132,9 @@ Variable* Function::var_extend (tokenizer* t, Scope* scope)
 }
 
 // <var_extend> -> .var <var_extend>
-Variable* Class_instance::var_extend (tokenizer* t, Scope* scope) {
+Variable* Var_object::var_extend (tokenizer* t, Scope* scope) {
+	if(type != class_instance)
+		return this;
 	if (tokens.top()->type != DOT)
 		return this;
 	get_token(t);
@@ -141,6 +144,7 @@ Variable* Class_instance::var_extend (tokenizer* t, Scope* scope) {
 	while(scope != global_scope) {
 		Variable *new_var = find_var(tokens.top(), scope->variables);
 		if(new_var != nullptr) {
+			get_token(t);
 			return new_var;
 		}
 		scope = scope->parent_scope;
@@ -169,7 +173,7 @@ Var_object* var(tokenizer* t, Scope* scope, bool* Lvalue) {
 	std::cout << "var"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
-		return nullptr;
+		error_handle("variable");
 	Scope* cur_scope = scope;
 	Variable* variable = nullptr;
 	while(cur_scope != nullptr && variable == nullptr) {
@@ -177,17 +181,17 @@ Var_object* var(tokenizer* t, Scope* scope, bool* Lvalue) {
 		if(variable == nullptr) 
 			cur_scope = cur_scope->parent_scope;
 	}
-	get_token(t);
 	if(variable == nullptr) 
-		return nullptr;	
+		return new Var_object(tokens.top()->value, undefined);
+	get_token(t);
 	Variable* new_variable = variable;
 	do {
 		if(tokens.top()->type == BRACKET_OPEN)
 			*Lvalue = false;
 		variable = new_variable;
 		new_variable = variable->var_extend(t, scope);
-	} while(new_variable != variable);
-	if(new_variable->type == class_ || new_variable->type == function_)
+	} while(new_variable != nullptr && new_variable != variable);
+	if(new_variable != nullptr && (new_variable->type == class_ || new_variable->type == function_))
 		error_handle("variable");
 	return (Var_object*) new_variable;
 }
@@ -215,10 +219,12 @@ Var_object* A(tokenizer* t, Scope* scope) {
 				get_token(t);
 				Var_object* expression = exp(t, scope);
 				Var_object* variable;
-				if(expression->type == class_instance)
-					variable = new Class_instance(var_token->value, ((Class_instance*) expression)->class_type);
+				if(expression->type == class_instance) {
+					variable = new Var_object(var_token->value, class_instance);
+					variable->class_type = expression->class_type;
+				}
 				else
-					variable = new Simple_Variable(var_token->value, expression->type);
+					variable = new Var_object(var_token->value, expression->type);
 				scope->variables.push_back(variable);
 				return variable;
 			}
@@ -247,9 +253,10 @@ Var_object* A(tokenizer* t, Scope* scope) {
 	if(tokens.top()->type == INT || tokens.top()->type == FLOAT || tokens.top()->type == STRING) {
 		Token* value = tokens.top();
 		get_token(t);
-		return new Simple_Variable("", convert_to_type(value));
+		return new Var_object("", convert_to_type(value));
 	}
 	error_handle("not okay");
+	return nullptr;
 }
 
 // <B> -> <A> | +<A> | -<A> | ~<A>
@@ -386,7 +393,7 @@ Var_object* H(tokenizer* t, Scope* scope) {
 			error_handle(")");
 		get_token(t);
 	} else if(tokens.top()->type == INT || tokens.top()->type == FLOAT) {
-		expression = new Simple_Variable("", convert_to_type(tokens.top()));
+		expression = new Var_object("", convert_to_type(tokens.top()));
 		get_token(t);
 	} else {
 		return G(t, scope);
@@ -415,7 +422,7 @@ Var_object* I(tokenizer* t, Scope* scope) {
 		 tokens.top()->value == "<=" || tokens.top()->value == ">" || tokens.top()->value == ">=") {
 		get_token(t);
 		Var_object* h2 = H(t, scope);
-		return new Simple_Variable("", bool_type);
+		return new Var_object("", bool_type);
 	}
 	return h1;
 }
@@ -427,7 +434,7 @@ Var_object* J(tokenizer* t, Scope* scope) {
 	if(tokens.top()->value == "not") {
 		get_token(t);
 		Var_object* i = I(t, scope);
-		return new Simple_Variable("", bool_type);
+		return new Var_object("", bool_type);
 	}
 	return I(t, scope);
 }
@@ -440,7 +447,7 @@ Var_object* K(tokenizer* t, Scope* scope) {
 	if(tokens.top()->value == "and") {
 		get_token(t);
 		Var_object* k = K(t, scope);
-		return new Simple_Variable("", bool_type);
+		return new Var_object("", bool_type);
 	}
 	return j;
 }
@@ -453,13 +460,13 @@ Var_object* exp(tokenizer* t, Scope* scope) {
 	if(tokens.top()->value == "or" || tokens.top()->value == "xor") {
 		get_token(t);
 		Var_object* expresssion = exp(t, scope);
-		return new Simple_Variable("", bool_type);
+		return new Var_object("", bool_type);
 	}
 	return k;
 }
 
 // <argument_list> -> <exp>, <argument_list> | <epx>
-void argument_list(tokenizer* t, Scope* scope, std::vector<Var_object*> *arguments_vector, int index) {
+void argument_list(tokenizer* t, Scope* scope, std::vector<Var_object*> *arguments_vector, size_t index) {
 	std::cout << "argument list"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(!convertible(exp(t, scope), (*arguments_vector)[index]))
@@ -497,7 +504,7 @@ bool decl_command(tokenizer* t, Scope* scope) {
 	get_token(t);
 	if(tokens.top()->type != DATA_TYPE)
 		return false;
-	Simple_Variable* variable = new Simple_Variable(var->value, get_type_from_decl(tokens.top()));
+	Var_object* variable = new Var_object(var->value, get_type_from_decl(tokens.top()));
 	scope->variables.push_back(variable);
 	get_token(t);
 	return true;
@@ -710,7 +717,7 @@ void return_type(tokenizer* t, Function* function) {
 	get_token(t);
 	if(tokens.top()->type != DATA_TYPE)
 		error_handle("return type");
-	function->return_object = new Simple_Variable("", get_type_from_decl(tokens.top()));
+	function->return_object = new Var_object("", get_type_from_decl(tokens.top()));
 	get_token(t);
 }
 
@@ -719,6 +726,9 @@ void function(tokenizer* t, Scope* scope) {
 	std::cout << "function"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Variable* func = find_var(tokens.top(), scope->variables);
+	if(func != nullptr)
+		error_handle("already defined");
+	Token* var_name = tokens.top();
 	Function* function = new Function(tokens.top()->value, new Scope(scope));
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
@@ -730,19 +740,21 @@ void function(tokenizer* t, Scope* scope) {
 	get_token(t);
 	return_type(t, function);
 	block_commands(t, function->function_scope);
-	if (func == nullptr) {
+	if(scope->parent_scope == nullptr) {
 		scope->variables.push_back(function);
 		return;
 	}
-	if(func->type == class_) {
-		Class *cl = (Class*) func;
+	Variable* find_class = find_var(var_name, scope->parent_scope->variables);
+	if(find_class != nullptr && find_class->type == class_) {
+		Class *cl = (Class*) find_class;
 		if(cl->class_scope == scope && cl->constructor == nullptr) {
 			cl->constructor = function;
-			function->return_object = new Class_instance("", cl);
-			return;
-		}
+			function->return_object = new Var_object("", class_instance);
+			function->return_object->class_type = cl;
+		} else
+			error_handle("something wrong, should analyze");
 	}
-	error_handle("already defined");
+	scope->variables.push_back(function);
 }
 
 // <base_list> -> var, <base_list> | var
@@ -808,7 +820,7 @@ void class_decl(tokenizer* t, Scope* scope) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
 		error_handle("class name");
-	Class *c = new Class(tokens.top()->value, scope);
+	Class *c = new Class(tokens.top()->value, new Scope(scope));
 	scope->variables.push_back(c);
 	get_token(t);
 	base_classes(t, c->class_scope);

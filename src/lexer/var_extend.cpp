@@ -1,6 +1,6 @@
 #include "records.hpp"
 
-array::array(std::string name_, size_t dimension, std::vector<size_t> size_) {
+array::array(std::string name_, size_t dimension, std::vector<size_t> size_) : Var_object(name, array_) {
     this->name = name_;
     if(dimension > size_.size())
         dimension = size_.size();
