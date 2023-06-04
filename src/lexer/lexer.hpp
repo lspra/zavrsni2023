@@ -36,7 +36,6 @@ class Variable {
 		std::string name;
 		std::string generated_name;
 		data_types type;
-		virtual Variable* var_extend(lexer* l, Scope* scope) = 0;
         Variable();
 };
 class Scope {
@@ -52,7 +51,6 @@ class Function: public Variable {
 		std::vector <Var_object* > function_parameters;
 		Function(std::string name_, Scope* scope, Var_object* return_object_);
 		Function(std::string name_, Scope* scope);
-		virtual Variable* var_extend(lexer* l, Scope* scope);
 };
 
 class Class: public Variable {
@@ -61,21 +59,18 @@ class Class: public Variable {
 		Function* constructor;
 		std::unordered_set<Class*> base_classes;
 		Class(std::string name_, Scope* scope);
-		virtual Variable* var_extend(lexer* l, Scope* scope);
 };
 
 class Var_object: public Variable {
 	public:
 		Class* class_type;
 		Var_object(std::string name_, data_types type_);
-		virtual Variable* var_extend(lexer* l, Scope* scope);
 };
 class Array: public Variable {
 	public:
 		std::vector<Var_object*> size;
 		Var_object* containing_type;
 		Array(std::string name_, std::vector<Var_object*> size_, Var_object* type);
-		virtual Variable* var_extend(lexer* l, Scope* scope);
 };
 
 class Array_element: public Var_object {
@@ -88,7 +83,6 @@ class Array_element: public Var_object {
 		Array* array_;
 		Array_element(Array_element* arr);
 		Array_element(Array* arr);
-		virtual Variable* var_extend(lexer* l, Scope* scope);
 		bool is_one_element();
 };
 
@@ -96,6 +90,12 @@ class lexer
 {
 private:
     Function* curr_function;
+    Variable* var_extend(Variable* v, Scope* scope);
+    Variable* var_extend(Function* v, Scope* scope);
+    Variable* var_extend(Class* v, Scope* scope);
+    Variable* var_extend(Var_object* v, Scope* scope);
+    Variable* var_extend(Array* v, Scope* scope);
+    Variable* var_extend(Array_element* v, Scope* scope);
     Var_object* var(Scope* scope, bool* Lvalue);
     Var_object* Lvalue(Scope* scope);
     Var_object* A(Scope* scope);
@@ -137,8 +137,8 @@ public:
     Var_object* exp(Scope* scope);
     void program();
     tokenizer* t;
-    code_generator* g;
-    lexer(tokenizer* t_, code_generator* g_): t(t_), g(g_) {
+    // code_generator* g;
+    lexer(tokenizer* t_/*, code_generator* g_*/): t(t_)/*, g(g_) */{
 
     }
 };

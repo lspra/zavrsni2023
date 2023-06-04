@@ -28,9 +28,10 @@ Var_object::Var_object(std::string name_, data_types type_) {
 	class_type = nullptr;
 }
 
-Array::Array(std::string name_, std::vector<Var_object*> size_, Var_object* type) {
+Array::Array(std::string name_, std::vector<Var_object*> size_, Var_object* type_) {
 	name = name_;
-	containing_type = type;
+	containing_type = type_;
+	type = array_;
 	for(size_t i = 0; i < size_.size(); i++) {
 		this->size.push_back(size_[i]);
 	}
@@ -38,6 +39,7 @@ Array::Array(std::string name_, std::vector<Var_object*> size_, Var_object* type
 
 Array_element::Array_element(Array_element* arr): Var_object(arr->name, array_element) {
 	array_ = arr->array_;
+	type = array_element;
 	// optimize
 	begin_index = arr->begin_index;
 	end_index = arr->end_index;
@@ -45,6 +47,7 @@ Array_element::Array_element(Array_element* arr): Var_object(arr->name, array_el
 
 Array_element::Array_element(Array* arr): Var_object(arr->name, array_element) {
 	array_ = arr;
+	type = array_element;
 }
 
 bool Array_element::is_one_element() {

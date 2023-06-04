@@ -161,45 +161,60 @@ Variable* find_var_all_scopes(Scope* cur_scope) {
 	return variable;
 }
 
+Variable* lexer::var_extend (Variable* var, Scope* scope) {
+	switch(var->type) {
+		case class_:
+			return var_extend((Class*) var, scope);
+		case function_:
+			return var_extend((Function*) var, scope);
+		case array_:
+			return var_extend((Array*) var, scope);
+		case array_element:
+			return var_extend((Array_element*) var, scope);
+		default:
+			return var_extend((Var_object*) var, scope);
+	}
+}
+
 // <var_extend> -> <var_extend>
-Variable* Class::var_extend (lexer* l, Scope* scope) {
-	if(constructor != nullptr)
-		return constructor->var_extend(l, scope);
+Variable* lexer::var_extend (Class* var, Scope* scope) {
+	if(var->constructor != nullptr)
+		return var_extend(var->constructor, scope);
 	Var_object* cl_instance = new Var_object("", class_instance);
-	cl_instance->class_type = this;
-	constructor = new Function(this->name, this->class_scope, cl_instance);
-	return constructor;
+	cl_instance->class_type = var;
+	var->constructor = new Function(var->name, var->class_scope, cl_instance);
+	return var->constructor;
 }
 
 // <var_extend> -> (<arguments>) <var_extend>
-Variable* Function::var_extend (lexer* l, Scope* scope)
+Variable* lexer::var_extend (Function* var, Scope* scope)
 {
 	if (tokens.top()->type == BRACKET_OPEN) {
-		get_token(l->t);
-		l->arguments(scope, &function_parameters);
+		get_token(t);
+		arguments(scope, &var->function_parameters);
 		if(tokens.top()->type != BRACKET_CLOSE)
 			error_handle(")");
 	} else {
 		error_handle("arguments");
 	}
-	get_token(l->t);
-	return return_object;
+	get_token(t);
+	return var->return_object;
 }
 
 // <var_extend> -> .var <var_extend>
-Variable* Var_object::var_extend (lexer* l, Scope* scope) {
-	if(type != class_instance)
-		return this;
+Variable* lexer::var_extend (Var_object* var, Scope* scope) {
+	if(var->type != class_instance)
+		return var;
 	if (tokens.top()->type != DOT)
-		return this;
-	get_token(l->t);
+		return var;
+	get_token(t);
 	if(tokens.top()->type != VAR)
 		error_handle("member name");
-	scope = this->class_type->class_scope;
-	while(scope != l->global_scope) {
+	scope = var->class_type->class_scope;
+	while(scope != global_scope) {
 		Variable *new_var = find_var(tokens.top(), scope->variables);
 		if(new_var != nullptr) {
-			get_token(l->t);
+			get_token(t);
 			return new_var;
 		}
 		scope = scope->parent_scope;
@@ -208,36 +223,36 @@ Variable* Var_object::var_extend (lexer* l, Scope* scope) {
 	return nullptr;
 }
 
-Variable* Array::var_extend (lexer* l, Scope* scope) {
-	return (new Array_element(this))->var_extend(l, scope);
+Variable* lexer::var_extend (Array* var, Scope* scope) {
+	return var_extend(new Array_element(var), scope);
 }
 
 // <var_extend> -> [<exp>] <var_extend> || [<exp>:<exp>] <var_extend> || [:<exp>] <var_extend> || [<exp>:] <var_extend> || [:] <var_extend>
-Variable* Array_element::var_extend(lexer* l, Scope* scope) {
+Variable* lexer::var_extend(Array_element* var, Scope* scope) {
 	if(tokens.top()->type != SQUARE_OPEN)
-		return this;
-	Array_element* ar_el = new Array_element(this);
+		return var;
+	Array_element* ar_el = new Array_element(var);
 	while(tokens.top()->type == SQUARE_OPEN) {
-		get_token(l->t);
+		get_token(t);
 		Var_object* begin;
 		Var_object* end;
 		if(tokens.top()->type == COLON)
 			begin = nullptr;
 		else
-			begin = l->exp(scope);
+			begin = exp(scope);
 		
 		if(tokens.top()->type == SQUARE_CLOSE)
 			end = begin;
 		else if(tokens.top()->type == COLON) {
-			get_token(l->t);
+			get_token(t);
 			if(tokens.top()->type == SQUARE_CLOSE)
 				end = nullptr;
 			else
-				Var_object* end = l->exp(scope);
+				end = exp(scope);
 		}
 		if(tokens.top()->type != SQUARE_CLOSE)
 			error_handle("]");
-		get_token(l->t);
+		get_token(t);
 
 		ar_el->add_begin(begin);
 		ar_el->add_end(end);
@@ -262,7 +277,7 @@ Var_object* lexer::var(Scope* scope, bool* Lvalue) {
 		if(tokens.top()->type == BRACKET_OPEN)
 			*Lvalue = false;
 		variable = new_variable;
-		new_variable = variable->var_extend(this, scope);
+		new_variable = var_extend(variable, scope);
 	} while(new_variable != nullptr && new_variable != variable);
 	if(new_variable == nullptr || (new_variable->type == class_ || new_variable->type == function_))
 		error_handle("variable");
@@ -579,8 +594,6 @@ bool lexer::decl_command(Scope* scope) {
 	// var = <exp>
 	Var_object* expression = exp(scope);
 	variable = (Var_object*) var;
-	std::cout << (expression == nullptr) << std::endl;
-	std::cout << expression->type << std::endl;
 	variable->type = expression->type;
 	if(expression->type == class_instance)
 		variable->class_type = expression->class_type;
