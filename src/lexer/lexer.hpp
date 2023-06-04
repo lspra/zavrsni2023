@@ -1,6 +1,7 @@
 #include "../generator/generator.hpp"
 #include "../tokenizer/tokenizer.hpp"
 #include "records.hpp"
+#include <stack>
 
 struct H0_args {
     Var_object* var;
