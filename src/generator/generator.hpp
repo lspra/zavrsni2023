@@ -7,10 +7,10 @@ public:
     ~code_generator();
 };
 
-code_generator::code_generator(/* args */)
-{
-}
+// code_generator::code_generator(/* args */)
+// {
+// }
 
-code_generator::~code_generator()
-{
-}
+// code_generator::~code_generator()
+// {
+// }
