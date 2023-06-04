@@ -2,6 +2,16 @@
 #include "../tokenizer/tokenizer.hpp"
 #include "records.hpp"
 
+struct H0_args {
+    Var_object* var;
+    Token* t;
+};
+
+struct H1_args {
+    Var_object* var;
+    Token* t;
+    Var_object* exp;
+};
 
 class lexer;
 class lexer
@@ -49,6 +59,8 @@ private:
     void program_parts(Scope* scope);
     void main_function(Scope* scope);
     void base_classes(Scope* scope);
+    std::stack<H0_args> H0_arguments;
+    std::stack<H1_args> H1_arguments;
 public:
     Scope* global_scope;
     void arguments(Scope* scope, std::vector<Var_object*> *arguments_vector);

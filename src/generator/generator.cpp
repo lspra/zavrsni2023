@@ -39,11 +39,11 @@ std::string convert_to_C(data_types type) {
 	exit(1);
 }
 
-void generate_C::generateA(Var_object* var, Var_object* exp) {
+void generate_C::generate_exp(Var_object* var, Var_object* exp) {
 	file << var->generated_name << " = " << exp->generated_name << ";\n";
 }
 
-void generate_C::generateA(Var_object* var, Token* t) {
+void generate_C::generate_exp(Var_object* var, Token* t) {
 	if(is_basic(var->type))
 		file << convert_to_C(var->type);
 	else 
@@ -52,11 +52,11 @@ void generate_C::generateA(Var_object* var, Token* t) {
 	file << " " << var->generated_name << " = " << t->value << ";\n";
 }
 
-void generate_C::generateB(Var_object* var_from, Var_object* var_to, Token* oper){
+void generate_C::generate_exp(Var_object* var_from, Var_object* var_to, Token* oper){
 	file << convert_to_C(var_to->type) << " " << var_to->generated_name << " = " << oper->value << var_from->generated_name << ";\n";
 }
 
-void generate_C::generateC(Var_object* var_from1, Var_object* var_from2, Var_object* var_to, Token* oper) {
+void generate_C::generate_exp(Var_object* var_from1, Var_object* var_from2, Var_object* var_to, Token* oper) {
 	file << convert_to_C(var_to->type) << " " << var_to->generated_name << " = " << var_from1->generated_name << oper->value << var_from2->generated_name << ";\n";
 }
 

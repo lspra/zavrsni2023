@@ -307,7 +307,7 @@ Var_object* lexer::A(Scope* scope) {
 			Var_object* expression = exp(scope);
 			if(!convertible(expression, variable))
 				error_handle("Cannot convert one type to another");
-			g->generateA(variable, expression);
+			g->generate_exp(variable, expression);
 		}
 		return variable;
 	}
@@ -323,7 +323,7 @@ Var_object* lexer::A(Scope* scope) {
 		Token* value = tokens.top();
 		get_token(t);
 		Var_object* new_var = new Var_object("", convert_to_type(value));
-		g->generateA(new_var, value);
+		g->generate_exp(new_var, value);
 		return new_var;
 	}
 	error_handle("not okay");
@@ -344,7 +344,7 @@ Var_object* lexer::B(Scope* scope) {
 		if(!isnumber(a) || (operator_->value == "~" && !isint(a)))
 			error_handle("operator not defined on not numbers");
 		Var_object* b = new Var_object("", a->type);
-		g->generateB(a, b, operator_);
+		g->generate_exp(a, b, operator_);
 		return b;
 	}
 	return a;
@@ -362,7 +362,7 @@ Var_object* lexer::C(Scope* scope) {
 		if(!isint(b) || !isint(c))
 			error_handle("operator not defined on not integers");
 		Var_object* ret = new Var_object("", c->type);
-		g->generateC(b, c, ret, op);
+		g->generate_exp(b, c, ret, op);
 		return ret;
 	}
 	return b;
@@ -380,7 +380,7 @@ Var_object* lexer::D(Scope* scope) {
 		if(!isint(c) || !isint(d))
 			error_handle("operator not defined on not integers");
 		Var_object* ret = new Var_object("", d->type);
-		g->generateC(c, d, ret, op);
+		g->generate_exp(c, d, ret, op);
 		return ret;
 	}
 	return c;
@@ -398,7 +398,7 @@ Var_object* lexer::E(Scope* scope) {
 		if(!isint(d) || !isint(e))
 			error_handle("operator not defined on not integers");
 		Var_object* ret = new Var_object("", e->type);
-		g->generateC(d, e, ret, op);
+		g->generate_exp(d, e, ret, op);
 		return ret;
 	}
 	return d;
@@ -416,7 +416,7 @@ Var_object* lexer::F(Scope* scope) {
 		if(!isnumber(e) || !isnumber(f))
 			error_handle("operator not defined on not integers");
 		Var_object* ret = new Var_object("", f->type);
-		g->generateC(e, f, ret, op);
+		g->generate_exp(e, f, ret, op);
 		return ret;
 	}
 	return e;
@@ -434,7 +434,7 @@ Var_object* lexer::G(Scope* scope) {
 		if(!isnumber(f) || !isnumber(g_))
 			error_handle("operator not defined on not numbers");
 		Var_object* ret = new Var_object("", g_->type);
-		g->generateC(f, g_, ret, op);
+		g->generate_exp(f, g_, ret, op);
 		return ret;
 	}
 	return f;
@@ -448,7 +448,7 @@ Var_object* lexer::H(Scope* scope) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	int stack_top = tokens.size();
 	if(tokens.top()->type == OPERATOR_MODIFY) {
-		Token* op = tokens.top();		
+		Token* op = tokens.top();
 		get_token(t);
 		Var_object* variable = Lvalue(scope);
 		if(!isnumber(variable))
@@ -460,22 +460,32 @@ Var_object* lexer::H(Scope* scope) {
 		bool lvalue = true;
 		Var_object* variable = var(scope, &lvalue);
 		if(tokens.top()->type == OPERATOR_MODIFY) {
+			Token* op = tokens.top();
 			if(variable == nullptr || !lvalue)
 				error_handle("defined Lvalue");
 			get_token(t);
+			Var_object* expression;
 			if(tokens.top()->type == BRACKET_OPEN) {
 				get_token(t);
-				if(!isnumber(exp(scope)))
+				expression = exp(scope);
+				if(!isnumber(expression))
 					error_handle("number");
 				if(tokens.top()->type != BRACKET_CLOSE)
 					error_handle(")");
 				get_token(t);
+				H1_args args = {.var = variable, .t = op, .exp = expression};
+				H1_arguments.push(args);
 			} else if(tokens.top()->type == INT || tokens.top()->type == FLOAT) {
+				expression = new Var_object("", convert_to_type(tokens.top()));
 				get_token(t);
+				H1_args args = {.var = variable, .t = op, .exp = expression};
+				H1_arguments.push(args);
+			} else {
+				H0_args args = {.var = variable, .t = op};
+				H0_arguments.push(args);
 			}
 			if(!isnumber(variable))
 				error_handle("operator not defined on not numbers.");
-			// TODO generate code
 			return variable;
 		}
 		remove_stack_top(stack_top);
@@ -521,8 +531,7 @@ Var_object* lexer::I(Scope* scope) {
 		get_token(t);
 		Var_object* h2 = H(scope);
 		Var_object* ret = new Var_object("", bool_type);
-		//TODO generate code for h
-		g->generateC(h1, h2, ret, op);
+		g->generate_exp(h1, h2, ret, op);
 		return ret;
 	}
 	return h1;
@@ -537,7 +546,7 @@ Var_object* lexer::J(Scope* scope) {
 		get_token(t);
 		Var_object* i = I(scope);
 		Var_object* ret = new Var_object("", bool_type);
-		g->generateB(i, ret, op);
+		g->generate_exp(i, ret, op);
 		return ret;
 	}
 	return I(scope);
@@ -553,7 +562,7 @@ Var_object* lexer::K(Scope* scope) {
 		get_token(t);
 		Var_object* k = K(scope);
 		Var_object* ret = new Var_object("", bool_type);
-		g->generateC(j, k, ret, op);
+		g->generate_exp(j, k, ret, op);
 		return ret;
 	}
 	return j;
@@ -569,9 +578,24 @@ Var_object* lexer::exp(Scope* scope) {
 		get_token(t);
 		Var_object* expresssion = exp(scope);
 		Var_object* ret = new Var_object("", bool_type);
-		g->generateC(k, expresssion, ret, op);
-		return ret;
+		g->generate_exp(k, expresssion, ret, op);
+		k = ret;
 	}
+
+	// generating code for expressions such as x++ found in this exp
+	while (!H0_arguments.empty())
+	{
+		H0_args args = H0_arguments.top();
+		g->generateH(args.var, args.t);
+		H0_arguments.pop();
+	}
+	while (!H1_arguments.empty())
+	{
+		H1_args args = H1_arguments.top();
+		g->generateH(args.var, args.t, args.exp);
+		H1_arguments.pop();
+	}
+	
 	return k;
 }
 
