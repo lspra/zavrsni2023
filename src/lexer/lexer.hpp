@@ -31,12 +31,13 @@ class Scope;
 class Var_object;
 class Variable {
 	private:
-        static int generated;
+        static inline int generated;
     public:
 		std::string name;
 		std::string generated_name;
 		data_types type;
 		virtual Variable* var_extend(lexer* l, Scope* scope) = 0;
+        Variable();
 };
 class Scope {
 	public:
