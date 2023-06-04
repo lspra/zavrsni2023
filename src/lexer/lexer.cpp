@@ -237,7 +237,7 @@ Variable* Array_element::var_extend(lexer* l, Scope* scope) {
 		}
 		if(tokens.top()->type != SQUARE_CLOSE)
 			error_handle("]");
-			get_token(l->t);
+		get_token(l->t);
 
 		ar_el->add_begin(begin);
 		ar_el->add_end(end);
@@ -588,9 +588,9 @@ bool lexer::decl_command(Scope* scope) {
 		Array_element* ar_el = (Array_element*) expression;
 		if(!ar_el->is_one_element())
 			error_handle("cannot copy array elements");
-		expression->type == ar_el->array_->containing_type->type;
-		if(expression->type == class_instance)
-			expression->class_type = ar_el->array_->containing_type->class_type;
+		variable->type = ar_el->array_->containing_type->type;
+		if(variable->type == class_instance)
+			variable->class_type = ar_el->array_->containing_type->class_type;
 	}
 	scope->variables.push_back(variable);
 	return true;
@@ -791,7 +791,7 @@ void lexer::function_arguments(Scope* scope, Function* function) {
 }
 
 // <return_type> -> =data_type | $
-void lexer::return_type(Scope* scope, Function* function) {
+void lexer::return_type(Function* function) {
 	std::cout << "return type"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->value != "=")
@@ -821,7 +821,7 @@ void lexer::function(Scope* scope) {
 	if(tokens.top()->type != BRACKET_CLOSE)
 		error_handle(")");
 	get_token(t);
-	return_type(scope, function);
+	return_type(function);
 	block_commands(function->function_scope);
 	if(scope->parent_scope == nullptr) {
 		scope->variables.push_back(function);

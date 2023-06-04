@@ -122,7 +122,7 @@ private:
     void block_commands(Scope* scope);
     void func_arguments_list(Scope* scope, Function* function);
     void function_arguments(Scope* scope, Function* function);
-    void return_type(Scope* scope, Function* function);
+    void return_type(Function* function);
     void function(Scope* scope);
     void base_list(Scope* scope);
     void visibility_block(Scope* scope);

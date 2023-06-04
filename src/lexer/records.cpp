@@ -50,7 +50,7 @@ Array_element::Array_element(Array* arr): Var_object(arr->name, array_element) {
 bool Array_element::is_one_element() {
 	if(begin_index.size() < array_->size.size())
 		return false;
-	for(int i = 0; i < begin_index.size(); i++) {
+	for(size_t i = 0; i < begin_index.size(); i++) {
 		if(begin_index[i] != end_index[i])
 			return false;
 	}

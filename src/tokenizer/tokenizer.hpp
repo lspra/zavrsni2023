@@ -46,7 +46,7 @@ class tokenizer
 {
 private:
 	int line = 0;
-	int pos = 0;
+	size_t pos = 0;
 	State state;
 	std::fstream file;
 	std::string cur_line;
