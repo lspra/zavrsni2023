@@ -1,7 +1,7 @@
 #include "lexer.hpp"
 
 Variable::Variable() {
-	generated_name = "a{0}" + std::to_string(generated++);
+	generated_name = "a" + std::to_string(generated++);
 }
 
 Function::Function(std::string name_, Scope* scope): function_scope(scope) {

@@ -307,6 +307,7 @@ Var_object* lexer::A(Scope* scope) {
 			Var_object* expression = exp(scope);
 			if(!convertible(expression, variable))
 				error_handle("Cannot convert one type to another");
+			g->generateA(variable, expression);
 		}
 		return variable;
 	}
@@ -317,11 +318,13 @@ Var_object* lexer::A(Scope* scope) {
 			error_handle(")");
 		get_token(t);
 		return expression;
-	} 
+	}
 	if(tokens.top()->type == INT || tokens.top()->type == FLOAT || tokens.top()->type == STRING) {
 		Token* value = tokens.top();
 		get_token(t);
-		return new Var_object("", convert_to_type(value));
+		Var_object* new_var = new Var_object("", convert_to_type(value));
+		g->generateA(new_var, value);
+		return new_var;
 	}
 	error_handle("not okay");
 	return nullptr;
@@ -331,14 +334,18 @@ Var_object* lexer::A(Scope* scope) {
 Var_object* lexer::B(Scope* scope) {
 	std::cout << "B"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	bool operator_ = false;
+	Token* operator_ = nullptr;
 	if(tokens.top()->value == "+" || tokens.top()->value == "-" || tokens.top()->value == "~") {
+		operator_ = tokens.top();
 		get_token(t);
-		operator_ = true;
 	}
 	Var_object* a = A(scope);
-	if(operator_ && !isnumber(a)){
-		error_handle("operator not defined on not numbers");
+	if(operator_ != nullptr) {
+		if(!isnumber(a) || (operator_->value == "~" && !isint(a)))
+			error_handle("operator not defined on not numbers");
+		Var_object* b = new Var_object("", a->type);
+		g->generateB(a, b, operator_);
+		return b;
 	}
 	return a;
 }
@@ -349,10 +356,14 @@ Var_object* lexer::C(Scope* scope) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* b = B(scope);
 	if(tokens.top()->value == "<<" || tokens.top()->value == ">>") {
+		Token* op = tokens.top();
 		get_token(t);
 		Var_object* c = C(scope);
 		if(!isint(b) || !isint(c))
 			error_handle("operator not defined on not integers");
+		Var_object* ret = new Var_object("", c->type);
+		g->generateC(b, c, ret, op);
+		return ret;
 	}
 	return b;
 }
@@ -363,10 +374,14 @@ Var_object* lexer::D(Scope* scope) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* c = C(scope);
 	if(tokens.top()->value == "&") {
+		Token* op = tokens.top();
 		get_token(t);
 		Var_object* d = D(scope);
 		if(!isint(c) || !isint(d))
 			error_handle("operator not defined on not integers");
+		Var_object* ret = new Var_object("", d->type);
+		g->generateC(c, d, ret, op);
+		return ret;
 	}
 	return c;
 }
@@ -377,10 +392,14 @@ Var_object* lexer::E(Scope* scope) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* d = D(scope);
 	if(tokens.top()->value == "|" || tokens.top()->value == "^") {
+		Token* op = tokens.top();
 		get_token(t);
 		Var_object* e = E(scope);
 		if(!isint(d) || !isint(e))
 			error_handle("operator not defined on not integers");
+		Var_object* ret = new Var_object("", e->type);
+		g->generateC(d, e, ret, op);
+		return ret;
 	}
 	return d;
 }
@@ -391,10 +410,14 @@ Var_object* lexer::F(Scope* scope) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* e = E(scope);
 	if(tokens.top()->value == "*" || tokens.top()->value == "/" || tokens.top()->value == "%") {
+		Token* op = tokens.top();
 		get_token(t);
 		Var_object* f = F(scope);
 		if(!isnumber(e) || !isnumber(f))
 			error_handle("operator not defined on not integers");
+		Var_object* ret = new Var_object("", f->type);
+		g->generateC(e, f, ret, op);
+		return ret;
 	}
 	return e;
 }
@@ -405,10 +428,14 @@ Var_object* lexer::G(Scope* scope) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* f = F(scope);
 	if(tokens.top()->value == "+" || tokens.top()->value == "-") {
+		Token* op = tokens.top();
 		get_token(t);
-		Var_object* g = G(scope);
-		if(!isnumber(f) || !isnumber(g))
+		Var_object* g_ = G(scope);
+		if(!isnumber(f) || !isnumber(g_))
 			error_handle("operator not defined on not numbers");
+		Var_object* ret = new Var_object("", g_->type);
+		g->generateC(f, g_, ret, op);
+		return ret;
 	}
 	return f;
 }
@@ -420,12 +447,13 @@ Var_object* lexer::H(Scope* scope) {
 	std::cout << "H"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	int stack_top = tokens.size();
-
 	if(tokens.top()->type == OPERATOR_MODIFY) {
+		Token* op = tokens.top();		
 		get_token(t);
 		Var_object* variable = Lvalue(scope);
 		if(!isnumber(variable))
 			error_handle("operator not defined on not numbers.");
+		g->generateH(variable, op);
 		return variable;
 	}
 	if(tokens.top()->type == VAR) {
@@ -447,6 +475,7 @@ Var_object* lexer::H(Scope* scope) {
 			}
 			if(!isnumber(variable))
 				error_handle("operator not defined on not numbers.");
+			// TODO generate code
 			return variable;
 		}
 		remove_stack_top(stack_top);
@@ -468,15 +497,15 @@ Var_object* lexer::H(Scope* scope) {
 	}
 
 	if(tokens.top()->type != OPERATOR_MODIFY) {
-		if(!isnumber(expression))
-			error_handle("operator not defined on not numbers.");
 		remove_stack_top(stack_top);
 		return G(scope);
 	}
+	Token* op_ = tokens.top();
 	get_token(t);
 	Var_object* variable = Lvalue(scope);
 	if(!isnumber(variable))
 		error_handle("operator not defined on not numbers.");
+	g->generateH(variable, op_, expression);
 	return variable;
 }
 
@@ -488,9 +517,13 @@ Var_object* lexer::I(Scope* scope) {
 	Var_object* h1 = H(scope);
 	if (tokens.top()->value == "==" || tokens.top()->value == "!=" || tokens.top()->value == "<" ||
 		 tokens.top()->value == "<=" || tokens.top()->value == ">" || tokens.top()->value == ">=") {
+		Token* op = tokens.top();		
 		get_token(t);
 		Var_object* h2 = H(scope);
-		return new Var_object("", bool_type);
+		Var_object* ret = new Var_object("", bool_type);
+		//TODO generate code for h
+		g->generateC(h1, h2, ret, op);
+		return ret;
 	}
 	return h1;
 }
@@ -500,9 +533,12 @@ Var_object* lexer::J(Scope* scope) {
 	std::cout << "J"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->value == "not") {
+		Token* op = tokens.top();
 		get_token(t);
 		Var_object* i = I(scope);
-		return new Var_object("", bool_type);
+		Var_object* ret = new Var_object("", bool_type);
+		g->generateB(i, ret, op);
+		return ret;
 	}
 	return I(scope);
 }
@@ -513,9 +549,12 @@ Var_object* lexer::K(Scope* scope) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* j = J(scope);
 	if(tokens.top()->value == "and") {
+		Token* op = tokens.top();
 		get_token(t);
 		Var_object* k = K(scope);
-		return new Var_object("", bool_type);
+		Var_object* ret = new Var_object("", bool_type);
+		g->generateC(j, k, ret, op);
+		return ret;
 	}
 	return j;
 }
@@ -526,9 +565,12 @@ Var_object* lexer::exp(Scope* scope) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* k =	K(scope);
 	if(tokens.top()->value == "or" || tokens.top()->value == "xor") {
+		Token* op = tokens.top();
 		get_token(t);
 		Var_object* expresssion = exp(scope);
-		return new Var_object("", bool_type);
+		Var_object* ret = new Var_object("", bool_type);
+		g->generateC(k, expresssion, ret, op);
+		return ret;
 	}
 	return k;
 }

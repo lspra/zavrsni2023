@@ -3,9 +3,11 @@
 
 int main(int argc, char** argv)
 {
-	std::string file = argv[1];
-	tokenizer t(file);
-	lexer l(&t, nullptr);
+	std::string source = argv[1];
+	std::string confidant = argv[2];
+	tokenizer t(source);
+	generate_C gc(confidant);
+	lexer l(&t, &gc);
 	l.program();
 	std::cout << "Parsing finished" << std::endl;
 }

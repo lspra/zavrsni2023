@@ -55,8 +55,8 @@ public:
     Var_object* exp(Scope* scope);
     void program();
     tokenizer* t;
-    // code_generator* g;
-    lexer(tokenizer* t_/*, code_generator* g_*/): t(t_)/*, g(g_) */{
+    code_generator* g;
+    lexer(tokenizer* t_, code_generator* g_): t(t_), g(g_) {
 
     }
 };
