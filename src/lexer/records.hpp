@@ -30,7 +30,7 @@ class Variable {
 	public:
 		std::string name;
 		data_types type;
-		virtual Variable* var_extend(tokenizer* t, Scope* scope) = 0;
+		virtual Variable* var_extend(lexer* l, Scope* scope) = 0;
 };
 class Scope {
 	public:
@@ -52,7 +52,7 @@ class Function: public Variable {
 			name = name_;
 			type = function_;
 		}
-		virtual Variable* var_extend(tokenizer* t, Scope* scope);
+		virtual Variable* var_extend(lexer* l, Scope* scope);
 };
 class Class: public Variable {
 	public:
@@ -65,7 +65,7 @@ class Class: public Variable {
 			type = class_;
 			class_scope = scope;
 		}
-		virtual Variable* var_extend(tokenizer* t, Scope* scope);
+		virtual Variable* var_extend(lexer* l, Scope* scope);
 };
 class Var_object: public Variable {
 	public:
@@ -75,7 +75,7 @@ class Var_object: public Variable {
 			type = type_;
 			class_type = nullptr;
 		}
-		virtual Variable* var_extend(tokenizer* t, Scope* scope);
+		virtual Variable* var_extend(lexer* l, Scope* scope);
 };
 class Array: public Variable {
 	public:
@@ -88,7 +88,7 @@ class Array: public Variable {
 				this->size.push_back(size_[i]);
 			}
 		}
-		virtual Variable* var_extend(tokenizer* t, Scope* scope);
+		virtual Variable* var_extend(lexer* l, Scope* scope);
 };
 
 class Array_element: public Var_object {
@@ -109,7 +109,7 @@ class Array_element: public Var_object {
 		Array_element(Array* arr): Var_object(arr->name, array_element) {
 			array_ = arr;
 		}
-		virtual Variable* var_extend(tokenizer* t, Scope* scope);
+		virtual Variable* var_extend(lexer* l, Scope* scope);
 		bool is_one_element() {
 			if(begin_index.size() < array_->size.size())
 				return false;
