@@ -181,15 +181,17 @@ Variable* lexer::var_extend (Class* var, Scope* scope) {
 // <var_extend> -> (<arguments>) <var_extend>
 Variable* lexer::var_extend (Function* var, Scope* scope)
 {
+	std::vector<Var_object*> args;
 	if (tokens.top()->type == BRACKET_OPEN) {
 		get_token(t);
-		arguments(scope, &var->function_parameters);
+		args = arguments(scope, &var->function_parameters);
 		if(tokens.top()->type != BRACKET_CLOSE)
 			error_handle(")");
 	} else {
 		error_handle("arguments");
 	}
 	get_token(t);
+	g->function_call(var, args);
 	return var->return_object;
 }
 
@@ -592,26 +594,34 @@ Var_object* lexer::exp(Scope* scope) {
 }
 
 // <argument_list> -> <exp>, <argument_list> | <epx>
-void lexer::argument_list(Scope* scope, std::vector<Var_object*> *arguments_vector, size_t index) {
+std::vector<Var_object*> lexer::argument_list(Scope* scope, std::vector<Var_object*> *arguments_vector, size_t index) {
 	std::cout << "argument list"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
-	if(!convertible(exp(scope), (*arguments_vector)[index]))
+	Var_object* express = exp(scope);
+	if(!convertible(express, (*arguments_vector)[index]))
 		error_handle("wrong argument type");
 	if(tokens.top()->type == COMMA) {
 		get_token(t);
 		if(index + 1 == arguments_vector->size())
 			error_handle("too many arguments");
-		argument_list(scope, arguments_vector, index + 1);
+		std::vector<Var_object*> ret = argument_list(scope, arguments_vector, index + 1);
+		ret.push_back(express);
+		return ret;
 	} else if(index + 1 != arguments_vector->size())
 		error_handle("too few arguments");
+	std::vector<Var_object*> ret;
+	ret.push_back(express);
+	return ret;
 }
 
 // <arguments> -> <argument_list> | $
-void lexer::arguments(Scope* scope, std::vector<Var_object*> *arguments_vector) {
+std::vector<Var_object*> lexer::arguments(Scope* scope, std::vector<Var_object*> *arguments_vector) {
 	std::cout << "arguments"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != BRACKET_CLOSE)
-		argument_list(scope, arguments_vector, 0);
+		return argument_list(scope, arguments_vector, 0);
+	std::vector<Var_object*> b;
+	return b;
 }
 
 // <decl_command> -> var = data_type
@@ -1035,6 +1045,7 @@ void lexer::class_decl(Scope* scope) {
 	get_token(t);
 	inside_class = false;
 	g->set_inside_class(false);
+	g->generate_class(c);
 }
 
 // <program_parts> -> <class_decl> <program_parts> | <function> <program_parts>

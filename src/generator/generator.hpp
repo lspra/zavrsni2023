@@ -44,6 +44,8 @@ public:
     void set_inside_class(bool inside_class_);
     void set_curr_function(Function* curr_function_);
     void write(std::string code);
+    virtual void generate_class(Class* c) = 0;
+    virtual void function_call(Function* f, std::vector<Var_object*> args) = 0;
 };
 
 class generate_C: public code_generator {
@@ -80,4 +82,6 @@ public:
     virtual void return_(Var_object* ret);
     virtual void function_decl(Function* f);
     virtual void main_decl(Function* f);
+    virtual void generate_class(Class* c);
+    virtual void function_call(Function* f, std::vector<Var_object*> args);
 };

@@ -37,6 +37,7 @@ std::string convert_to_C(data_types type) {
 	default:
 		break;
 	}
+	std::cerr << "only basic types for now" << std::endl;
 	exit(1);
 }
 
@@ -85,7 +86,6 @@ void code_generator::set_curr_function(Function* curr_function_) {
 }
 
 void code_generator::write(std::string code) {
-	std::cout << inside_class << std::endl;
 	if(inside_class)
 		curr_function->generated_code += code;
 	else
@@ -102,9 +102,8 @@ void generate_C::generate_exp(Var_object* var, Var_object* exp) {
 void generate_C::generate_exp(Var_object* var, Token* t) {
 	if(is_basic(var->type))
 		var->generated_code = convert_to_C(var->type);
-	else 
-		//TODO
-		return;
+	if(var->type == class_instance)
+		var->generated_code = "struct " + var->class_type->generated_name;
 	if (t->type == STRING)
 		var->generated_code += " " + var->generated_name + "[] = \"" + t->value + "\";\n";
 	else
@@ -162,7 +161,12 @@ void generate_C::generate_var(Array* var) {
 }
 
 void generate_C::generate_undefined_exp(Var_object* var, Var_object* exp) {
-	var->generated_code = convert_to_C(var->type) + " " + var->generated_name;
+	if(is_basic(var->type))
+		var->generated_code = convert_to_C(var->type);
+	if(var->type == class_instance)
+		var->generated_code = "struct " + var->class_type->generated_name;
+	var->generated_code += " " + var->generated_name;
+	
 	if(var->type == string_type)
 		var->generated_code += "[]";
 	var->generated_code += ";\n";
@@ -247,17 +251,17 @@ void generate_C::return_(Var_object* ret) {
 
 void generate_C::function_decl(Function* f) {
 	if(f->return_object == nullptr)
-		file << "void";
+		write("void");
 	else
-		file << convert_to_C(f->return_object->type);
-	file << " " << f->generated_name << " (";
+		write(convert_to_C(f->return_object->type));
+	write(" " + f->generated_name + " (");
 	for(size_t i = 0; i < f->function_parameters.size(); i++) {
-		file << convert_to_C(f->function_parameters[i]->type) << " " << f->function_parameters[i]->generated_name;
+		write(convert_to_C(f->function_parameters[i]->type) + " " + f->function_parameters[i]->generated_name);
 		if(i != f->function_parameters.size() - 1)
-			file << ",";
+			write(",");
 		f->function_parameters[i]->generated_code = "";
 	}
-	file << ") {\n";
+	write(") {\n");
 }
 
 void generate_C::main_decl(Function* f) {
@@ -279,4 +283,30 @@ void generate_C::main_decl(Function* f) {
 		f->function_parameters[i]->generated_code = "";
 		file << f->function_parameters[i]->generated_name << " =  argv[" << i + 1 << "];\n";
 	}
+}
+
+void generate_C::generate_class(Class* c) {
+	write("struct " + c->generated_name + " {\n");
+	for(auto var: c->class_scope->variables) {
+		if(var->type != function_) {
+			generate_var((Var_object*) var);
+			write(var->generated_code);
+			var->generated_code = "";
+		}
+	}
+	write("};\n");
+}
+
+void generate_C::function_call(Function* f, std::vector<Var_object*> args) {
+	f->return_object->generated_name = "a" + f->return_object->generated_name;
+	generate_var(f->return_object);
+	for(auto arg: args)
+		f->return_object->generated_code += arg->generated_code;
+	f->return_object->generated_code += f->return_object->generated_name + " = " + f->generated_name + "(";
+	for(int i = args.size()-1; i >= 0; i--) {
+		f->return_object->generated_code += args[i]->generated_name;
+		if(i != 0)
+			f->return_object->generated_code += ", ";
+	}
+	f->return_object->generated_code += ");\n";
 }

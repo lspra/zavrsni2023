@@ -39,7 +39,7 @@ private:
     Var_object* I(Scope* scope);
     Var_object* J(Scope* scope);
     Var_object* K(Scope* scope);
-    void argument_list(Scope* scope, std::vector<Var_object*> *arguments_vector, size_t index);
+    std::vector<Var_object*> argument_list(Scope* scope, std::vector<Var_object*> *arguments_vector, size_t index);
     Var_object* decl_command(Scope* scope, bool func_arg);
     void if_command(Scope* scope);
     void for_command(Scope* scope);
@@ -66,7 +66,7 @@ private:
     std::stack<H1_args> H1_arguments;
 public:
     Scope* global_scope;
-    void arguments(Scope* scope, std::vector<Var_object*> *arguments_vector);
+    std::vector<Var_object*> arguments(Scope* scope, std::vector<Var_object*> *arguments_vector);
     Var_object* exp(Scope* scope);
     void program();
     tokenizer* t;
