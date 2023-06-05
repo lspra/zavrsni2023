@@ -4,9 +4,10 @@ Variable::Variable() {
 	generated_name = "a" + std::to_string(generated++);
 }
 
-Function::Function(std::string name_, Scope* scope): function_scope(scope) {
+Function::Function(std::string name_, Scope* scope_) {
 	name = name_;
 	type = function_;
+	function_scope = scope_;
 }
 
 Function::Function(std::string name_, Scope* scope, Var_object* return_object_): function_scope(scope) {
@@ -44,12 +45,16 @@ Array_element::Array_element(Array_element* arr): Var_object(arr->name, array_el
 	begin_index = arr->begin_index;
 	end_index = arr->end_index;
 	generated_name = arr->generated_name;
+	generated_code = arr->generated_code;
+	arr->generated_code = "";
 }
 
 Array_element::Array_element(Array* arr): Var_object(arr->name, array_element) {
 	array_ = arr;
 	type = array_element;
 	generated_name = arr->generated_name;
+	generated_code = arr->generated_code;
+	arr->generated_code = "";
 }
 
 bool Array_element::is_one_element() {

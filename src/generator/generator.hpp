@@ -28,20 +28,25 @@ public:
     virtual void generate_if(Var_object* exp) = 0;
     virtual void generate_else() = 0;
     virtual void end_block() = 0;
-    virtual void while_begin() = 0;
-    virtual void while_branch(Var_object* exp) = 0;
-    virtual void while_end() = 0;
     virtual void input(Var_object* var) = 0;
     virtual void print(Var_object* var) = 0;
+    virtual void write_exp(Var_object* var) = 0;
+    virtual void for_begin() = 0;
+    virtual void for_continue() = 0;
+    virtual void for_cond(Var_object* exp) = 0;
+    virtual void break_loop() = 0;
+    virtual void continue_loop() = 0;
+    virtual void return_() = 0;
+    virtual void return_(Var_object* ret) = 0;
 };
 
 class generate_C: public code_generator {
 private:
-    size_t while_numbs;
-    std::stack<size_t> curr_whiles;
+    size_t for_numbs;
+    std::stack<size_t> curr_fors;
 public:
     generate_C(std::string name) : code_generator(name) {
-        while_numbs = 0;
+        for_numbs = 0;
     }
     virtual void generate_undefined_exp(Var_object* var, Var_object* exp);
     virtual void generate_exp(Var_object* var, Var_object* exp);
@@ -56,9 +61,14 @@ public:
     void generate_if_not(Var_object* exp);
     virtual void generate_else();
     virtual void end_block();
-    virtual void while_begin();
-    virtual void while_branch(Var_object* exp);
-    virtual void while_end();
     virtual void input(Var_object* var);
     virtual void print(Var_object* var);
+    virtual void write_exp(Var_object* var);
+    virtual void for_begin();
+    virtual void for_continue();
+    virtual void for_cond(Var_object* exp);
+    virtual void break_loop();
+    virtual void continue_loop();
+    virtual void return_();
+    virtual void return_(Var_object* ret);
 };

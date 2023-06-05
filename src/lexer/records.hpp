@@ -33,6 +33,7 @@ class Variable {
     public:
 		std::string name;
 		std::string generated_name;
+		std::string generated_code;
 		data_types type;
         Variable();
 };
