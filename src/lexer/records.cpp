@@ -61,3 +61,13 @@ bool Array_element::is_one_element() {
 	}
 	return true;
 }
+
+data_types Var_object::get_type() {
+	return type;
+}
+
+data_types Array_element::get_type() {
+	if(is_one_element())
+		return this->array_->containing_type->get_type();
+	return type;
+}

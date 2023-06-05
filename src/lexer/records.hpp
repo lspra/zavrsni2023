@@ -63,6 +63,7 @@ class Var_object: public Variable {
 	public:
 		Class* class_type;
 		Var_object(std::string name_, data_types type_);
+		virtual data_types get_type();
 };
 class Array: public Variable {
 	public:
@@ -82,4 +83,5 @@ class Array_element: public Var_object {
 		Array_element(Array_element* arr);
 		Array_element(Array* arr);
 		bool is_one_element();
+		virtual data_types get_type();
 };
