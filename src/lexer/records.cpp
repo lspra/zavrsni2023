@@ -43,11 +43,13 @@ Array_element::Array_element(Array_element* arr): Var_object(arr->name, array_el
 	// optimize
 	begin_index = arr->begin_index;
 	end_index = arr->end_index;
+	generated_name = arr->generated_name;
 }
 
 Array_element::Array_element(Array* arr): Var_object(arr->name, array_element) {
 	array_ = arr;
 	type = array_element;
+	generated_name = arr->generated_name;
 }
 
 bool Array_element::is_one_element() {

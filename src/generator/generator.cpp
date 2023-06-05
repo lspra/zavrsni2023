@@ -32,7 +32,7 @@ std::string convert_to_C(data_types type) {
 	case float96:
 		return "long double";
 	case string_type:
-		return "char[]";
+		return "char";
 	default:
 		break;
 	}
@@ -49,15 +49,24 @@ void generate_C::generate_exp(Var_object* var, Token* t) {
 	else 
 		//TODO
 		return;
-	file << " " << var->generated_name << " = " << t->value << ";\n";
+	if (t->type == STRING)
+		file << " " << var->generated_name << "[] = \"" << t->value << "\";\n";
+	else
+		file << " " << var->generated_name << " = " << t->value << ";\n";
 }
 
 void generate_C::generate_exp(Var_object* var_from, Var_object* var_to, Token* oper){
-	file << convert_to_C(var_to->type) << " " << var_to->generated_name << " = " << oper->value << var_from->generated_name << ";\n";
+	file << convert_to_C(var_to->type) << " " << var_to->generated_name;
+	if(var_to->type == string_type)
+		file << "[]";
+	file << " = " << oper->value << var_from->generated_name << ";\n";
 }
 
 void generate_C::generate_exp(Var_object* var_from1, Var_object* var_from2, Var_object* var_to, Token* oper) {
-	file << convert_to_C(var_to->type) << " " << var_to->generated_name << " = " << var_from1->generated_name << oper->value << var_from2->generated_name << ";\n";
+	file << convert_to_C(var_to->type) << " " << var_to->generated_name;
+	if(var_to->type == string_type)
+		file << "[]";
+	file << " = " << var_from1->generated_name << oper->value << var_from2->generated_name << ";\n";
 }
 
 void generate_C::generateH(Var_object* var, Token* t) {
@@ -69,4 +78,22 @@ void generate_C::generateH(Var_object* var, Token* t, Var_object* exp) {
 	file << var->generated_name << " = " << var->generated_name << t->value[0] << exp->generated_name << ";\n";
 }
 
-// TODO better conversion
+void generate_C::generate_var(Var_object* var) {
+	file << convert_to_C(var->type);
+	if(var->type == string_type)
+		file << "[]";
+	file << " " << var->generated_name << ";\n";
+}
+
+void generate_C::generate_var(Array* var) {
+	file << convert_to_C(var->containing_type->type) << " " << var->generated_name;
+	for(auto s: var->size) {
+		file << "[" << s->generated_name << "]";
+	}
+	file << ";\n";
+}
+
+void generate_C::generate_undefined_exp(Var_object* var, Var_object* exp) {
+	file << convert_to_C(var->type) << " ";
+	generate_exp(var, exp);
+}

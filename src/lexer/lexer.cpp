@@ -15,7 +15,6 @@ void remove_stack_top(int index) {
 		remove_stack_top();
 }
 
-
 void get_token(tokenizer* t) {
 	if(temp_removed.size() != 0) {
 		tokens.push(temp_removed.top());
@@ -67,7 +66,30 @@ void Array_element::add_end(Var_object* end) {
 		error_handle("index out of bound");
 	if(!isint(end))
 		error_handle("index not integer");
+	if(end != begin_index.back())
+		error_handle("TODO intervals not supported yet");
+	generated_name += "[" + end->generated_name + "]";
 	end_index.push_back(end);
+}
+
+Var_object* convert(Var_object* var1, Var_object* var2) {
+	if(var1->type == class_instance || var2->type == class_instance)
+		error_handle("operation between classes not yet podrzane"); // TODO operations between classes
+	if(var1->type == array_element) {
+		Array_element* var1_array = (Array_element*) var1;
+		if(!var1_array->is_one_element())
+			error_handle("operations between arrays not yet podrzane"); // TODO operations between arrays
+		return convert(var1_array->array_->containing_type, var2);
+	}
+	if(var2->type == array_element) {
+		Array_element* var2_array = (Array_element*) var2;
+		if(!var2_array->is_one_element())
+			error_handle("operations between arrays not yet podrzane"); // TODO operations between arrays
+		return convert(var1, var2_array->array_->containing_type);
+	}
+	if(var1->type == string_type || var2->type == string_type)
+		error_handle("operations between strings not yet podrzane"); // TODO operations between arrays
+	return new Var_object("", std::max(var1->type, var2->type));
 }
 
 data_types get_type_from_decl(Token* token) {
@@ -361,7 +383,7 @@ Var_object* lexer::C(Scope* scope) {
 		Var_object* b2 = B(scope);
 		if(!isint(b) || !isint(b2))
 			error_handle("operator not defined on not integers");
-		Var_object* rez = new Var_object("", b2->type);
+		Var_object* rez = convert(b, b2);
 		g->generate_exp(b, b2, rez, op);
 		b = rez;
 	}
@@ -379,7 +401,7 @@ Var_object* lexer::D(Scope* scope) {
 		Var_object* c2 = C(scope);
 		if(!isint(c) || !isint(c2))
 			error_handle("operator not defined on not integers");
-		Var_object* rez = new Var_object("", c2->type);
+		Var_object* rez = convert(c, c2);
 		g->generate_exp(c, c2, rez, op);
 		c = rez;
 	}
@@ -397,7 +419,7 @@ Var_object* lexer::E(Scope* scope) {
 		Var_object* d2 = D(scope);
 		if(!isint(d) || !isint(d2))
 			error_handle("operator not defined on not integers");
-		Var_object* rez = new Var_object("", d2->type);
+		Var_object* rez = convert(d, d2);
 		g->generate_exp(d, d2, rez, op);
 		d = rez;
 	}
@@ -415,7 +437,7 @@ Var_object* lexer::F(Scope* scope) {
 		Var_object* e2 = E(scope);
 		if(!isnumber(e) || !isnumber(e2))
 			error_handle("operator not defined on not integers");
-		Var_object* rez = new Var_object("", e2->type);
+		Var_object* rez = convert(e, e2);
 		g->generate_exp(e, e2, rez, op);
 		e = rez;
 	}
@@ -433,7 +455,7 @@ Var_object* lexer::G(Scope* scope) {
 		Var_object* f2 = F(scope);
 		if(!isnumber(f) || !isnumber(f2))
 			error_handle("operator not defined on not numbers");
-		Var_object* sum = new Var_object("", f2->type);
+		Var_object* sum = convert(f, f2);
 		g->generate_exp(f, f2, sum, op);
 		f = sum;
 	}
@@ -519,7 +541,6 @@ Var_object* lexer::H(Scope* scope) {
 	return variable;
 }
 
-
 // <I> -> <H> == <H> | <H> != <H>| <H> < <H> | <H> <= <H> | <H> > <H> | <H> >= <H> | <H>
 Var_object* lexer::I(Scope* scope) {
 	std::cout << "I"  << std::endl;
@@ -527,7 +548,7 @@ Var_object* lexer::I(Scope* scope) {
 	Var_object* h1 = H(scope);
 	if (tokens.top()->value == "==" || tokens.top()->value == "!=" || tokens.top()->value == "<" ||
 		 tokens.top()->value == "<=" || tokens.top()->value == ">" || tokens.top()->value == ">=") {
-		Token* op = tokens.top();		
+		Token* op = tokens.top();
 		get_token(t);
 		Var_object* h2 = H(scope);
 		Var_object* ret = new Var_object("", bool_type);
@@ -595,7 +616,6 @@ Var_object* lexer::exp(Scope* scope) {
 		g->generateH(args.var, args.t, args.exp);
 		H1_arguments.pop();
 	}
-	
 	return k;
 }
 
@@ -643,6 +663,7 @@ bool lexer::decl_command(Scope* scope) {
 		get_token(t);
 		if(tokens.top()->type != SQUARE_OPEN) {
 			scope->variables.push_back(variable);
+			g->generate_var(variable);
 			return true;
 		}
 		std::vector<Var_object*> sizes;
@@ -654,6 +675,7 @@ bool lexer::decl_command(Scope* scope) {
 			get_token(t);
 		}
 		Array* arr = new Array(var->name, sizes, variable);
+		g->generate_var(arr);
 		scope->variables.push_back(arr);
 		return true;
 	}
@@ -671,6 +693,7 @@ bool lexer::decl_command(Scope* scope) {
 		if(variable->type == class_instance)
 			variable->class_type = ar_el->array_->containing_type->class_type;
 	}
+	g->generate_undefined_exp(variable, expression);
 	scope->variables.push_back(variable);
 	return true;
 }
@@ -1045,7 +1068,6 @@ void lexer::main_function(Scope* scope) {
 void lexer::program() {
 	std::cout << "program"  << std::endl;
 	global_scope = new Scope(nullptr);
-	std::cout << "here" << std::endl;
 	get_token(t);
 	program_parts(global_scope);
 	main_function(global_scope);
