@@ -923,6 +923,7 @@ void lexer::function(Scope* scope) {
 	Token* var_name = tokens.top();
 	Function* function = new Function(tokens.top()->value, new Scope(scope));
 	curr_function = function;
+	g->set_curr_function(function);
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
 		error_handle("(");
@@ -951,6 +952,7 @@ void lexer::function(Scope* scope) {
 	}
 	scope->variables.push_back(function);
 	curr_function = nullptr;
+	g->set_curr_function(nullptr);
 }
 
 // <base_list> -> var, <base_list> | var
@@ -1013,6 +1015,10 @@ void lexer::class_body(Scope* scope) {
 void lexer::class_decl(Scope* scope) {
 	std::cout << "class decl"  << std::endl;
 	get_token(t);
+	if(inside_class)
+		error_handle("cannot have nested classes yet.");
+	inside_class = true;
+	g->set_inside_class(true);
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
 		error_handle("class name");
@@ -1027,6 +1033,8 @@ void lexer::class_decl(Scope* scope) {
 	if(tokens.top()->type != CURLY_CLOSE)
 		error_handle("}");
 	get_token(t);
+	inside_class = false;
+	g->set_inside_class(false);
 }
 
 // <program_parts> -> <class_decl> <program_parts> | <function> <program_parts>
@@ -1038,7 +1046,7 @@ void lexer::program_parts(Scope* scope) {
 		class_decl(scope);
 	else if(tokens.top()->type == VAR) {
 		int stack_top = tokens.size();
-		if(decl_command(scope, false)) {
+		if(decl_command(scope, true)) {
 			if(tokens.top()->type != SEMICOLON)
 				error_handle(";");
 			get_token(t);

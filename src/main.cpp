@@ -14,8 +14,8 @@ int main(int argc, char** argv)
 	if(argc >= 2)
 		confidant = argv[2];
 	tokenizer t(source);
-	generate_C gc(confidant);
-	lexer l(&t, &gc);
+	generate_C *gc = new generate_C(confidant);
+	lexer l(&t, gc);
 	l.program();
 	std::cout << "Parsing finished" << std::endl;
 }

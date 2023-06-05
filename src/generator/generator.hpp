@@ -7,11 +7,12 @@ class code_generator
 protected:
 	std::fstream file;
 	std::string filename;
+    Function* curr_function;
+    bool inside_class;
 public:
     code_generator(std::string filename_) : filename(filename_) {
 		file.open(filename);
 	}
-public:
     virtual void generate_undefined_exp(Var_object* var, Var_object* exp) = 0;
     // var = exp
     virtual void generate_exp(Var_object* var, Var_object* exp) = 0;
@@ -40,6 +41,9 @@ public:
     virtual void return_(Var_object* ret) = 0;
     virtual void function_decl(Function* f) = 0;
     virtual void main_decl(Function* f) = 0;
+    void set_inside_class(bool inside_class_);
+    void set_curr_function(Function* curr_function_);
+    void write(std::string code);
 };
 
 class generate_C: public code_generator {

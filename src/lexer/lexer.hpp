@@ -18,6 +18,7 @@ class lexer;
 class lexer
 {
 private:
+    bool inside_class;
     Function* curr_function;
     Variable* var_extend(Variable* v, Scope* scope);
     Variable* var_extend(Function* v, Scope* scope);
@@ -71,6 +72,6 @@ public:
     tokenizer* t;
     code_generator* g;
     lexer(tokenizer* t_, code_generator* g_): t(t_), g(g_) {
-
+        inside_class = false;
     }
 };

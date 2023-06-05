@@ -75,6 +75,25 @@ std::string qualifier(data_types type) {
 	exit(1);
 }
 
+
+void code_generator::set_inside_class(bool inside_class_) {
+	inside_class = inside_class_;
+}
+
+void code_generator::set_curr_function(Function* curr_function_) {
+	curr_function = curr_function_;
+}
+
+void code_generator::write(std::string code) {
+	std::cout << inside_class << std::endl;
+	if(inside_class)
+		curr_function->generated_code += code;
+	else
+		file << code;
+	file.flush();
+}
+
+
 void generate_C::generate_exp(Var_object* var, Var_object* exp) {
 	var->generated_code += exp->generated_code + var->generated_name + " = " + exp->generated_name + ";\n";
 	exp->generated_code = "";
@@ -151,53 +170,53 @@ void generate_C::generate_undefined_exp(Var_object* var, Var_object* exp) {
 }
 
 void generate_C::write_exp(std::string code) {
-	file << code;
+	write(code);
 }
 
 void generate_C::generate_if(Var_object* exp) {
-	file << "if(" << exp->generated_name << ") {\n";
+	write("if(" + exp->generated_name + ") {\n");
 }
 
 void generate_C::generate_if_not(Var_object* exp) {
-	file << "if(!" << exp->generated_name << ") {\n";
+	write("if(!" + exp->generated_name + ") {\n");
 }
 
 void generate_C::end_block() {
-	file << "}\n";
+	write("}\n");
 }
 
 void generate_C::generate_else() {
-	file << "else {\n";
+	write("else {\n");
 }
 
 void generate_C::input(Var_object* var) {
-	file << "scanf(\"%" << qualifier(var->get_type()) << "\", &" << var->generated_name << ");\n";
+	write("scanf(\"%" + qualifier(var->get_type()) + "\", &" + var->generated_name + ");\n");
 }
 
 void generate_C::print(Var_object* var) {
-	file << var->generated_code;
+	write(var->generated_code);
 	var->generated_code = "";
-	file << "printf(\"%" << qualifier(var->get_type()) << "\", " << var->generated_name << ");\n";
+	write("printf(\"%" + qualifier(var->get_type()) + "\", " + var->generated_name + ");\n");
 }
 
 void generate_C::for_begin() {
-	file << "goto for" << for_numbs << "_cond;\n";
-	file << "for" << for_numbs << "_begin: ;\n";
+	write("goto for" + std::to_string(for_numbs) + "_cond;\n");
+	write("for" + std::to_string(for_numbs) + "_begin: ;\n");
 	curr_fors.push(for_numbs++);
 }
 
 void generate_C::for_cond(Var_object* exp, std::string code) {
-	file << "for" << curr_fors.top() << "_cond: ;\n";
-	file << code;
+	write("for" + std::to_string(curr_fors.top()) + "_cond: ;\n");
+	write(code);
 	generate_if(exp);
-	file << "\tgoto for" << curr_fors.top() << "_begin;\n";
+	write("\tgoto for" + std::to_string(curr_fors.top()) + "_begin;\n");
 	end_block();
-	file << "for" << curr_fors.top() << "_end: ;\n";
+	write("for" + std::to_string(curr_fors.top()) + "_end: ;\n");
 	curr_fors.pop();
 }
 
 void generate_C::for_continue() {
-	file << "for" << curr_fors.top() << "_cont: ;\n";
+	write("for" + std::to_string(curr_fors.top()) + "_cont: ;\n");
 }
 
 void generate_C::break_loop() {
@@ -205,7 +224,7 @@ void generate_C::break_loop() {
 		std::cerr << "a continue statement may only be used within a loop" << std::endl;
 		exit(1);
 	}
-	file << "goto for" << curr_fors.top() << "_end;\n";
+	write("goto for" + std::to_string(curr_fors.top()) + "_end;\n");
 }
 
 void generate_C::continue_loop() {
@@ -213,17 +232,17 @@ void generate_C::continue_loop() {
 		std::cerr << "a continue statement may only be used within a loop" << std::endl;
 		exit(1);
 	}
-	file << "goto for" << curr_fors.top() << "_cont;\n";
+	write("goto for" + std::to_string(curr_fors.top()) + "_cont;\n");
 }
 
 
 void generate_C::return_() {
-	file << "return;\n";
+	write("return;\n");
 }
 
 void generate_C::return_(Var_object* ret) {
-	file << ret->generated_code;
-	file << "return " << ret->generated_name << ";\n";
+	write(ret->generated_code);
+	write("return " + ret->generated_name + ";\n");
 }
 
 void generate_C::function_decl(Function* f) {
