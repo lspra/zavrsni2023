@@ -30,14 +30,16 @@ public:
     virtual void end_block() = 0;
     virtual void input(Var_object* var) = 0;
     virtual void print(Var_object* var) = 0;
-    virtual void write_exp(Var_object* var) = 0;
+    virtual void write_exp(std::string code) = 0;
     virtual void for_begin() = 0;
     virtual void for_continue() = 0;
-    virtual void for_cond(Var_object* exp) = 0;
+    virtual void for_cond(Var_object* exp, std::string code) = 0;
     virtual void break_loop() = 0;
     virtual void continue_loop() = 0;
     virtual void return_() = 0;
     virtual void return_(Var_object* ret) = 0;
+    virtual void function_decl(Function* f) = 0;
+    virtual void main_decl(Function* f) = 0;
 };
 
 class generate_C: public code_generator {
@@ -47,6 +49,7 @@ private:
 public:
     generate_C(std::string name) : code_generator(name) {
         for_numbs = 0;
+        file << "#include <stdio.h>\n";
     }
     virtual void generate_undefined_exp(Var_object* var, Var_object* exp);
     virtual void generate_exp(Var_object* var, Var_object* exp);
@@ -63,12 +66,14 @@ public:
     virtual void end_block();
     virtual void input(Var_object* var);
     virtual void print(Var_object* var);
-    virtual void write_exp(Var_object* var);
+    virtual void write_exp(std::string code);
     virtual void for_begin();
     virtual void for_continue();
-    virtual void for_cond(Var_object* exp);
+    virtual void for_cond(Var_object* exp, std::string code);
     virtual void break_loop();
     virtual void continue_loop();
     virtual void return_();
     virtual void return_(Var_object* ret);
+    virtual void function_decl(Function* f);
+    virtual void main_decl(Function* f);
 };

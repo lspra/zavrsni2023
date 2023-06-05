@@ -109,7 +109,7 @@ void generate_C::generate_exp(Var_object* var_from1, Var_object* var_from2, Var_
 	if(var_to->type == string_type)
 		var_to->generated_code += "[]";
 	var_to->generated_code += " = " + var_from1->generated_name + oper->value + var_from2->generated_name + ";\n";
-	var_from1->generated_code = var_from2->generated_code = "";
+	var_from2->generated_code = "";
 }
 
 void generate_C::generateH(Var_object* var, Token* t) {
@@ -150,9 +150,8 @@ void generate_C::generate_undefined_exp(Var_object* var, Var_object* exp) {
 	generate_exp(var, exp);
 }
 
-void generate_C::write_exp(Var_object* var) {
-	file << var->generated_code;
-	var->generated_code = "";
+void generate_C::write_exp(std::string code) {
+	file << code;
 }
 
 void generate_C::generate_if(Var_object* exp) {
@@ -176,6 +175,8 @@ void generate_C::input(Var_object* var) {
 }
 
 void generate_C::print(Var_object* var) {
+	file << var->generated_code;
+	var->generated_code = "";
 	file << "printf(\"%" << qualifier(var->get_type()) << "\", " << var->generated_name << ");\n";
 }
 
@@ -185,9 +186,9 @@ void generate_C::for_begin() {
 	curr_fors.push(for_numbs++);
 }
 
-void generate_C::for_cond(Var_object* exp) {
+void generate_C::for_cond(Var_object* exp, std::string code) {
 	file << "for" << curr_fors.top() << "_cond: ;\n";
-	file << exp->generated_code;
+	file << code;
 	generate_if(exp);
 	file << "\tgoto for" << curr_fors.top() << "_begin;\n";
 	end_block();
@@ -223,4 +224,40 @@ void generate_C::return_() {
 void generate_C::return_(Var_object* ret) {
 	file << ret->generated_code;
 	file << "return " << ret->generated_name << ";\n";
+}
+
+void generate_C::function_decl(Function* f) {
+	if(f->return_object == nullptr)
+		file << "void";
+	else
+		file << convert_to_C(f->return_object->type);
+	file << " " << f->generated_name << " (";
+	for(size_t i = 0; i < f->function_parameters.size(); i++) {
+		file << convert_to_C(f->function_parameters[i]->type) << " " << f->function_parameters[i]->generated_name;
+		if(i != f->function_parameters.size() - 1)
+			file << ",";
+		f->function_parameters[i]->generated_code = "";
+	}
+	file << ") {\n";
+}
+
+void generate_C::main_decl(Function* f) {
+	if(f->return_object == nullptr)
+		file << "void";
+	else
+		file << convert_to_C(f->return_object->type);
+	file << " main (";
+	if(f->function_parameters.size() != 0)
+		file << "int argc, char** argv";
+	file << ") {\n";
+	if(f->function_parameters.size() != 0) {
+		file << "if(argc <" << f->function_parameters.size() + 1 << ") {\n";
+		file << "\tfprintf(stderr, \"error - too few arguments\");\n";
+		file << "\texit(1);\n}\n";
+	}
+	for(size_t i = 0; i < f->function_parameters.size(); i++) {
+		file << f->function_parameters[i]->generated_code;
+		f->function_parameters[i]->generated_code = "";
+		file << f->function_parameters[i]->generated_name << " =  argv[" << i + 1 << "];\n";
+	}
 }

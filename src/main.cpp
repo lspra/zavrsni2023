@@ -3,8 +3,16 @@
 
 int main(int argc, char** argv)
 {
-	std::string source = argv[1];
-	std::string confidant = argv[2];
+	std::string source;
+	if(argc >= 1)
+		source = argv[1];
+	else {
+		std::cerr << "no argument";
+		exit(1);
+	}
+	std::string confidant = "a.c";
+	if(argc >= 2)
+		confidant = argv[2];
 	tokenizer t(source);
 	generate_C gc(confidant);
 	lexer l(&t, &gc);

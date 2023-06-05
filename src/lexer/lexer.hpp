@@ -39,7 +39,7 @@ private:
     Var_object* J(Scope* scope);
     Var_object* K(Scope* scope);
     void argument_list(Scope* scope, std::vector<Var_object*> *arguments_vector, size_t index);
-    Var_object* decl_command(Scope* scope);
+    Var_object* decl_command(Scope* scope, bool func_arg);
     void if_command(Scope* scope);
     void for_command(Scope* scope);
     void while_command(Scope* scope);

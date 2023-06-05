@@ -105,7 +105,7 @@ Token *tokenizer::get_next_token()
 				t->value += cur_line[pos];
 			else if (cur_line[pos] == '.' || cur_line[pos] == ',') {
 				state = floating_numb;
-				t->value += cur_line[pos];
+				t->value += '.';
 			}
 			else {
 				end_token(t);
