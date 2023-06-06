@@ -943,11 +943,16 @@ void lexer::function(Scope* scope) {
 	Variable* func = find_var(tokens.top(), scope->variables);
 	if(func != nullptr)
 		error_handle("already defined");
-	Token* var_name = tokens.top();
 	Function* function = new Function(tokens.top()->value, new Scope(scope));
+	scope->variables.push_back(function);
 	curr_function = function;
 	g->set_curr_function(function);
 	get_token(t);
+	if(inside_class && g->curr_class->name == function->name) {
+		g->curr_class->constructor = function;
+		function->return_object = new Var_object("", class_instance);
+		function->return_object->class_type = g->curr_class;
+	}
 	if(tokens.top()->type != BRACKET_OPEN)
 		error_handle("(");
 	get_token(t);
@@ -958,22 +963,9 @@ void lexer::function(Scope* scope) {
 	return_type(function);
 	g->function_decl(function);
 	block_commands(function->function_scope);
+	if(inside_class && g->curr_class->constructor == function)
+		g->constructor_return();
 	g->end_block();
-	if(scope->parent_scope == nullptr) {
-		scope->variables.push_back(function);
-		return;
-	}
-	Variable* find_class = find_var(var_name, scope->parent_scope->variables);
-	if(find_class != nullptr && find_class->type == class_) {
-		Class *cl = (Class*) find_class;
-		if(cl->class_scope == scope && cl->constructor == nullptr) {
-			cl->constructor = function;
-			function->return_object = new Var_object("", class_instance);
-			function->return_object->class_type = cl;
-		} else
-			error_handle("something wrong, should analyze");
-	}
-	scope->variables.push_back(function);
 	curr_function = nullptr;
 	g->set_curr_function(nullptr);
 }

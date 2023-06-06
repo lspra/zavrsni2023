@@ -78,10 +78,14 @@ data_types Array_element::get_type() {
 	return type;
 }
 
-std::string Var_object::get_name(Class* class_) {
+std::string Var_object::get_name(Class* class_, Function* function_) {
 	if(generate_prefix && class_ != nullptr) {
 		generate_prefix = false;
-		std::string to_Ret = "b" + class_->generated_name + "->" + name_prefix + generated_name;;
+		std::string to_Ret;
+		if(class_->constructor != function_)
+			to_Ret = "b" + class_->generated_name + "->" + name_prefix + generated_name;
+		else
+			to_Ret = "b" + class_->generated_name + "." + name_prefix + generated_name;
 		name_prefix = "";
 		return to_Ret;
 	}

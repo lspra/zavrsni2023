@@ -66,7 +66,7 @@ class Var_object: public Variable {
 		Class* class_type;
 		Var_object(std::string name_, data_types type_);
 		virtual data_types get_type();
-		std::string get_name(Class* class_);
+		std::string get_name(Class* class_, Function* function_);
 		std::string name_prefix;
 };
 class Array: public Variable {
