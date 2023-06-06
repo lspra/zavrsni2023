@@ -10,6 +10,7 @@ protected:
     Function* curr_function;
     bool inside_class;
 public:
+    Class* curr_class;
     code_generator(std::string filename_) : filename(filename_) {
 		file.open(filename);
 	}
@@ -43,6 +44,7 @@ public:
     virtual void main_decl(Function* f) = 0;
     void set_inside_class(bool inside_class_);
     void set_curr_function(Function* curr_function_);
+    void set_curr_class(Class* curr_class_);
     void write(std::string code);
     virtual void generate_class(Class* c) = 0;
     virtual void function_call(Function* f, std::vector<Var_object*> args) = 0;

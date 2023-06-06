@@ -35,7 +35,8 @@ class Variable {
 		std::string generated_name;
 		std::string generated_code;
 		data_types type;
-        Variable();
+		bool generate_prefix;
+	    Variable();
 };
 class Scope {
 	public:
@@ -65,6 +66,8 @@ class Var_object: public Variable {
 		Class* class_type;
 		Var_object(std::string name_, data_types type_);
 		virtual data_types get_type();
+		std::string get_name(Class* class_);
+		std::string name_prefix;
 };
 class Array: public Variable {
 	public:

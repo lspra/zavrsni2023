@@ -141,12 +141,15 @@ Variable* find_var(Token* var, std::vector<Variable*> variables) {
 	return nullptr;
 }
 
-Variable* find_var_all_scopes(Scope* cur_scope) {
+Variable* lexer::find_var_all_scopes(Scope* cur_scope) {
 	Variable* variable = nullptr;
 	while(cur_scope != nullptr && variable == nullptr) {
 		variable = find_var(tokens.top(), cur_scope->variables);
 		if(variable == nullptr) 
 			cur_scope = cur_scope->parent_scope;
+		else if(inside_class && cur_scope == g->curr_class->class_scope) {
+			variable->generate_prefix = true;
+		}
 	}
 	if(variable == nullptr) 
 		return new Var_object(tokens.top()->value, undefined);
@@ -158,7 +161,7 @@ Variable* lexer::var_extend (Variable* var, Scope* scope) {
 		case class_:
 			return var_extend((Class*) var, scope);
 		case function_:
-			return var_extend((Function*) var, scope);
+			return var_extend((Function*) var, scope, nullptr);
 		case array_:
 			return var_extend((Array*) var, scope);
 		case array_element:
@@ -179,12 +182,14 @@ Variable* lexer::var_extend (Class* var, Scope* scope) {
 }
 
 // <var_extend> -> (<arguments>) <var_extend>
-Variable* lexer::var_extend (Function* var, Scope* scope)
+Variable* lexer::var_extend (Function* var, Scope* scope, Var_object* first_arg)
 {
 	std::vector<Var_object*> args;
 	if (tokens.top()->type == BRACKET_OPEN) {
 		get_token(t);
 		args = arguments(scope, &var->function_parameters);
+		if(first_arg != nullptr)
+			args.push_back(first_arg);
 		if(tokens.top()->type != BRACKET_CLOSE)
 			error_handle(")");
 	} else {
@@ -209,7 +214,15 @@ Variable* lexer::var_extend (Var_object* var, Scope* scope) {
 		Variable *new_var = find_var(tokens.top(), scope->variables);
 		if(new_var != nullptr) {
 			get_token(t);
-			return new_var;
+			new_var->generate_prefix = var->generate_prefix;
+			var->generate_prefix = false;
+			if(new_var->type != function_) {
+				Var_object * v = (Var_object*) new_var;
+				v->name_prefix = var->name_prefix + var->generated_name + ".";
+				var->name_prefix = "";
+				return v;
+			}
+			return var_extend((Function*) new_var, scope, var);
 		}
 		scope = scope->parent_scope;
 	}
@@ -1028,11 +1041,12 @@ void lexer::class_decl(Scope* scope) {
 	if(inside_class)
 		error_handle("cannot have nested classes yet.");
 	inside_class = true;
-	g->set_inside_class(true);
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
 		error_handle("class name");
 	Class *c = new Class(tokens.top()->value, new Scope(scope));
+	g->set_inside_class(true);
+	g->set_curr_class(c);
 	scope->variables.push_back(c);
 	get_token(t);
 	base_classes(c->class_scope);
@@ -1045,6 +1059,7 @@ void lexer::class_decl(Scope* scope) {
 	get_token(t);
 	inside_class = false;
 	g->set_inside_class(false);
+	g->set_curr_class(nullptr);
 	g->generate_class(c);
 }
 

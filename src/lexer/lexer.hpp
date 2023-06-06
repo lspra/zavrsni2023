@@ -20,8 +20,9 @@ class lexer
 private:
     bool inside_class;
     Function* curr_function;
+    Variable* find_var_all_scopes(Scope* cur_scope);
     Variable* var_extend(Variable* v, Scope* scope);
-    Variable* var_extend(Function* v, Scope* scope);
+    Variable* var_extend(Function* v, Scope* scope, Var_object* first_arg);
     Variable* var_extend(Class* v, Scope* scope);
     Variable* var_extend(Var_object* v, Scope* scope);
     Variable* var_extend(Array* v, Scope* scope);

@@ -1,6 +1,7 @@
 #include "lexer.hpp"
 
 Variable::Variable() {
+	generate_prefix = false;
 	generated_name = "a" + std::to_string(generated++);
 }
 
@@ -75,4 +76,17 @@ data_types Array_element::get_type() {
 	if(is_one_element())
 		return this->array_->containing_type->get_type();
 	return type;
+}
+
+std::string Var_object::get_name(Class* class_) {
+	if(generate_prefix && class_ != nullptr) {
+		generate_prefix = false;
+		std::string to_Ret = "b" + class_->generated_name + "->" + name_prefix + generated_name;;
+		name_prefix = "";
+		return to_Ret;
+	}
+	generate_prefix = false;
+	std::string to_Ret = name_prefix + generated_name;;
+	name_prefix = "";
+	return to_Ret;
 }
