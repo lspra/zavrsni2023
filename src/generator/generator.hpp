@@ -5,14 +5,14 @@
 class code_generator
 {
 protected:
-	std::fstream file;
+	std::ofstream file;
 	std::string filename;
     Function* curr_function;
     bool inside_class;
 public:
     Class* curr_class;
     code_generator(std::string filename_) : filename(filename_) {
-		file.open(filename);
+		file.open(filename, std::ios::out | std::ios::trunc);
 	}
     virtual void generate_undefined_exp(Var_object* var, Var_object* exp) = 0;
     // var = exp
