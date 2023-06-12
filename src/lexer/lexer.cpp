@@ -26,9 +26,13 @@ void get_token(tokenizer* t) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 }
 
-void error_handle(std::string expected) {
-	std::cerr << "Expected " << expected << " in line " << tokens.top()->line << std::endl;
+void error_handle(std::string message) {
+	std::cerr << message << " in line " << tokens.top()->line << std::endl;
 	exit(1);
+}
+
+void error_handle_expected(std::string expected) {
+	error_handle("expected" + expected);
 }
 
 bool isint(data_types type) {
@@ -53,20 +57,20 @@ void Array_element::add_end(Var_object* end) {
 	if(!isint(end->get_type()))
 		error_handle("index not integer");
 	if(end != begin_index.back())
-		error_handle("TODO intervals not supported yet");
+		error_handle("Intervals are not supported");
 	generated_name += "[" + end->generated_name + "]";
 	end_index.push_back(end);
 }
 
 Var_object* convert(Var_object* var1, Var_object* var2) {
 	if(var1->type == class_instance || var2->type == class_instance)
-		error_handle("operation between classes not yet podrzane"); // TODO operations between classes
+		error_handle("operation between classes not possible");
 	if(var1->get_type() == array_element)
-		error_handle("operations between arrays not yet podrzane"); // TODO operations between arrays
+		error_handle("operations between arrays not possible");
 	if(var2->get_type() == array_element)
-		error_handle("operations between arrays not yet podrzane"); // TODO operations between arrays
+		error_handle("operations between arrays not possible");
 	if(var1->type == string_type || var2->type == string_type)
-		error_handle("operations between strings not yet podrzane"); // TODO operations between arrays
+		error_handle("operations between strings not possible");
 	return new Var_object("", std::max(var1->get_type(), var2->get_type()));
 }
 
@@ -108,7 +112,7 @@ data_types convert_to_type(Token* token) {
 		return float32;
 	if(token->type == STRING)
 		return string_type;
-	error_handle("cannot convert this");
+	error_handle("cannot convert this to constant");
 	return undefined;
 }
 
@@ -191,9 +195,9 @@ Variable* lexer::var_extend (Function* var, Scope* scope, Var_object* first_arg)
 		if(first_arg != nullptr)
 			args.push_back(first_arg);
 		if(tokens.top()->type != BRACKET_CLOSE)
-			error_handle(")");
+			error_handle_expected(")");
 	} else {
-		error_handle("arguments");
+		error_handle_expected("arguments");
 	}
 	get_token(t);
 	g->function_call(var, args);
@@ -208,7 +212,7 @@ Variable* lexer::var_extend (Var_object* var, Scope* scope) {
 		return var;
 	get_token(t);
 	if(tokens.top()->type != VAR)
-		error_handle("member name");
+		error_handle_expected("member name");
 	scope = var->class_type->class_scope;
 	while(scope != global_scope) {
 		Variable *new_var = find_var(tokens.top(), scope->variables);
@@ -258,7 +262,7 @@ Variable* lexer::var_extend(Array_element* var, Scope* scope) {
 				end = exp(scope);
 		}
 		if(tokens.top()->type != SQUARE_CLOSE)
-			error_handle("]");
+			error_handle_expected("]");
 		get_token(t);
 
 		ar_el->add_begin(begin);
@@ -275,7 +279,7 @@ Var_object* lexer::var(Scope* scope, bool* Lvalue) {
 	std::cout << "var"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
-		error_handle("variable");
+		error_handle_expected("variable");
 	Variable * variable = find_var_all_scopes(scope);
 	if(variable->type == undefined)
 		return (Var_object*)variable;
@@ -288,7 +292,7 @@ Var_object* lexer::var(Scope* scope, bool* Lvalue) {
 		new_variable = var_extend(variable, scope);
 	} while(new_variable != nullptr && new_variable != variable);
 	if(new_variable == nullptr || (new_variable->type == class_ || new_variable->type == function_))
-		error_handle("variable");
+		error_handle_expected("variable");
 	return (Var_object*) new_variable;
 }
 
@@ -296,7 +300,7 @@ Var_object* lexer::Lvalue(Scope* scope) {
 	bool lvalue = true;
 	Var_object* variable = var(scope, &lvalue);
 	if(!lvalue || variable == nullptr)
-		error_handle("defined Lvalue");
+		error_handle_expected("defined Lvalue");
 	return variable;
 }
 
@@ -310,7 +314,7 @@ Var_object* lexer::A(Scope* scope) {
 		Var_object* variable = var(scope, &lvalue);
 		if (tokens.top()->value == "=") {
 			if(!lvalue)
-				error_handle("Lvalue");
+				error_handle_expected("Lvalue");
 			get_token(t);
 			Var_object* expression = exp(scope);
 			if(!convertible(expression, variable))
@@ -323,7 +327,7 @@ Var_object* lexer::A(Scope* scope) {
 		get_token(t);
 		Var_object* expression = exp(scope);
 		if(tokens.top()->type != BRACKET_CLOSE)
-			error_handle(")");
+			error_handle_expected(")");
 		get_token(t);
 		return expression;
 	}
@@ -334,7 +338,7 @@ Var_object* lexer::A(Scope* scope) {
 		g->generate_exp(new_var, value);
 		return new_var;
 	}
-	error_handle("not okay");
+	error_handle_expected("expression");
 	return nullptr;
 }
 
@@ -470,16 +474,16 @@ Var_object* lexer::H(Scope* scope) {
 		if(tokens.top()->type == OPERATOR_MODIFY) {
 			Token* op = tokens.top();
 			if(variable == nullptr || !lvalue)
-				error_handle("defined Lvalue");
+				error_handle_expected("defined Lvalue");
 			get_token(t);
 			Var_object* expression;
 			if(tokens.top()->type == BRACKET_OPEN) {
 				get_token(t);
 				expression = exp(scope);
 				if(!isnumber(expression->get_type()))
-					error_handle("number");
+					error_handle_expected("number");
 				if(tokens.top()->type != BRACKET_CLOSE)
-					error_handle(")");
+					error_handle_expected(")");
 				get_token(t);
 				H1_args args = {.var = variable, .t = op, .exp = expression};
 				H1_arguments.push(args);
@@ -505,7 +509,7 @@ Var_object* lexer::H(Scope* scope) {
 		get_token(t);
 		expression = exp(scope);
 		if(tokens.top()->type != BRACKET_CLOSE)
-			error_handle(")");
+			error_handle_expected(")");
 		get_token(t);
 	} else if(tokens.top()->type == INT || tokens.top()->type == FLOAT) {
 		expression = new Var_object("", convert_to_type(tokens.top()));
@@ -662,13 +666,13 @@ Var_object* lexer::decl_command(Scope* scope, bool func_arg) {
 			return variable;
 		}
 		if(func_arg)
-			error_handle("not array");
+			error_handle("array arguments not supported");
 		std::vector<Var_object*> sizes;
 		while (tokens.top()->type == SQUARE_OPEN) {
 			get_token(t);
 			sizes.push_back(exp(scope));
 			if(tokens.top()->type != SQUARE_CLOSE)
-				error_handle("]");
+				error_handle_expected("]");
 			get_token(t);
 		}
 		Array* arr = new Array(var->name, sizes, variable);
@@ -677,7 +681,7 @@ Var_object* lexer::decl_command(Scope* scope, bool func_arg) {
 		return new Array_element(arr);
 	}
 	if(func_arg)
-		error_handle("not expression");
+		error_handle("default argument values not supported");
 	// var = <exp>
 	Var_object* expression = exp(scope);
 	variable = (Var_object*) var;
@@ -699,13 +703,13 @@ void lexer::if_command(Scope* scope) {
 	get_token(t);
 	Scope* if_scope = new Scope(scope);
 	if(tokens.top()->type != BRACKET_OPEN)
-		error_handle("(");
+		error_handle_expected("(");
 	get_token(t);
 	Var_object* expression = exp(if_scope);
 	g->write_exp(expression->generated_code);
 	expression->generated_code = "";
 	if(tokens.top()->type != BRACKET_CLOSE)
-		error_handle(")");
+		error_handle_expected(")");
 	get_token(t);
 	g->generate_if(expression);
 	block_commands(if_scope);
@@ -727,7 +731,7 @@ void lexer::for_command(Scope* scope) {
 	for_scope->parent_scope = scope;
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
-		error_handle("(");
+		error_handle_expected("(");
 	get_token(t);
 	int stack_top = tokens.size();
 	Var_object* first = decl_command(for_scope, false);
@@ -739,19 +743,19 @@ void lexer::for_command(Scope* scope) {
 	first->generated_code = "";
 	g->for_begin();
 	if(tokens.top()->type != SEMICOLON)
-		error_handle(";");
+		error_handle_expected(";");
 	get_token(t);
 	Var_object* condition = exp(for_scope);
 	std::string gen_cond = condition->generated_code;
 	condition->generated_code = "";
 	if(tokens.top()->type != SEMICOLON)
-		error_handle(";");
+		error_handle_expected(";");
 	get_token(t);
 	Var_object* e = exp(for_scope);
 	std::string for_last = e->generated_code;
 	e->generated_code = "";
 	if(tokens.top()->type != BRACKET_CLOSE)
-		error_handle(")");
+		error_handle_expected(")");
 	get_token(t);
 	block_commands(for_scope);
 	g->for_continue();
@@ -766,13 +770,13 @@ void lexer::while_command(Scope* scope) {
 	Scope* while_scope = new Scope(scope);
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
-		error_handle("(");
+		error_handle_expected("(");
 	get_token(t);
 	Var_object* expr = exp(while_scope);
 	std::string code = expr->generated_code;
 	expr->generated_code = "";
 	if(tokens.top()->type != BRACKET_CLOSE)
-		error_handle(")");
+		error_handle_expected(")");
 	get_token(t);
 	g->for_begin();
 	block_commands(while_scope);
@@ -786,11 +790,11 @@ void lexer::input_command(Scope* scope) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
-		error_handle("(");
+		error_handle_expected("(");
 	get_token(t);
 	Var_object* variable = Lvalue(scope);
 	if(tokens.top()->type != BRACKET_CLOSE)
-		error_handle(")");
+		error_handle_expected(")");
 	g->input(variable);
 	get_token(t);
 }
@@ -801,11 +805,11 @@ void lexer::print_command(Scope* scope) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
-		error_handle("(");
+		error_handle_expected("(");
 	get_token(t);
 	Var_object* expr = exp(scope);
 	if(tokens.top()->type != BRACKET_CLOSE)
-		error_handle(")");
+		error_handle_expected(")");
 	g->print(expr);
 	get_token(t);
 }
@@ -819,13 +823,13 @@ void lexer::return_command(Scope* scope) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type == SEMICOLON) {
 		if(curr_function->return_object != nullptr)
-			error_handle("expression");
+			error_handle_expected("expression");
 		g->return_();
 		return;
 	}
 	Var_object* ret = exp(scope);
 	if(!convertible(ret, curr_function->return_object))
-		error_handle("cannot convert");
+		error_handle("cannot convert expression to return type of function");
 	g->return_(ret);
 }
 
@@ -870,7 +874,7 @@ void lexer::command(Scope* scope) {
 			e->generated_code = "";
 		}
 		if(tokens.top()->type != SEMICOLON)
-			error_handle("command - ;");
+			error_handle_expected(";");
 		get_token(t);
 	}
 }
@@ -893,7 +897,7 @@ void lexer::block_commands(Scope* scope) {
 		get_token(t);
 		commands(scope);
 		if(tokens.top()->type != CURLY_CLOSE)
-			error_handle("}");
+			error_handle_expected("}");
 		get_token(t);
 	} else {
 		command(scope);
@@ -906,7 +910,7 @@ void lexer::func_arguments_list(Scope* scope, Function* function) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* arg = decl_command(function->function_scope, true);
 	if(arg == nullptr)
-		error_handle("argument");
+		error_handle_expected("argument");
 	function->function_parameters.push_back(arg);
 	if(tokens.top()->type == COMMA) {
 		get_token(t);
@@ -931,7 +935,7 @@ void lexer::return_type(Function* function) {
 		return;
 	get_token(t);
 	if(tokens.top()->type != DATA_TYPE)
-		error_handle("return type");
+		error_handle_expected("return type");
 	function->return_object = new Var_object("", get_type_from_decl(tokens.top()));
 	get_token(t);
 }
@@ -942,7 +946,7 @@ void lexer::function(Scope* scope) {
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Variable* func = find_var(tokens.top(), scope->variables);
 	if(func != nullptr)
-		error_handle("already defined");
+		error_handle("variable with this name already defined");
 	Function* function = new Function(tokens.top()->value, new Scope(scope));
 	scope->variables.push_back(function);
 	curr_function = function;
@@ -954,11 +958,11 @@ void lexer::function(Scope* scope) {
 		function->return_object->class_type = g->curr_class;
 	}
 	if(tokens.top()->type != BRACKET_OPEN)
-		error_handle("(");
+		error_handle_expected("(");
 	get_token(t);
 	function_arguments(scope, function);
 	if(tokens.top()->type != BRACKET_CLOSE)
-		error_handle(")");
+		error_handle_expected(")");
 	get_token(t);
 	return_type(function);
 	g->function_decl(function);
@@ -975,7 +979,7 @@ void lexer::base_list(Scope* scope) {
 	std::cout << "base list"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
-		error_handle("base class name");
+		error_handle_expected("base class name");
 	get_token(t);
 	if(tokens.top()->type == COMMA) {
 		get_token(t);
@@ -990,10 +994,10 @@ void lexer::base_classes(Scope* scope) {
 	if(tokens.top()->type == CURLY_OPEN)
 		return;
 	if(tokens.top()->type != BRACKET_OPEN)
-		error_handle("(");
+		error_handle_expected("(");
 	base_list(scope);
 	if(tokens.top()->type != BRACKET_CLOSE)
-		error_handle(")");
+		error_handle_expected(")");
 	get_token(t);
 }
 
@@ -1002,10 +1006,10 @@ void visibility_specifier(tokenizer* t) {
 	std::cout << "visibility specifier"  << std::endl;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->value != "private" && tokens.top()->value != "public")
-		error_handle("visibility specifier");
+		error_handle_expected("visibility specifier");
 	get_token(t);
 	if(tokens.top()->type != COLON)
-		error_handle(":");
+		error_handle_expected(":");
 	get_token(t);
 }
 
@@ -1035,7 +1039,7 @@ void lexer::class_decl(Scope* scope) {
 	inside_class = true;
 	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
-		error_handle("class name");
+		error_handle_expected("class name");
 	Class *c = new Class(tokens.top()->value, new Scope(scope));
 	g->set_inside_class(true);
 	g->set_curr_class(c);
@@ -1043,11 +1047,11 @@ void lexer::class_decl(Scope* scope) {
 	get_token(t);
 	base_classes(c->class_scope);
 	if(tokens.top()->type != CURLY_OPEN)
-		error_handle("{");
+		error_handle_expected("{");
 	get_token(t);
 	class_body(c->class_scope);
 	if(tokens.top()->type != CURLY_CLOSE)
-		error_handle("}");
+		error_handle_expected("}");
 	get_token(t);
 	inside_class = false;
 	g->set_inside_class(false);
@@ -1066,7 +1070,7 @@ void lexer::program_parts(Scope* scope) {
 		int stack_top = tokens.size();
 		if(decl_command(scope, true)) {
 			if(tokens.top()->type != SEMICOLON)
-				error_handle(";");
+				error_handle_expected(";");
 			get_token(t);
 		} else {
 			remove_stack_top(stack_top);
@@ -1088,11 +1092,11 @@ void lexer::main_function(Scope* scope) {
 	Function* function = new Function(tokens.top()->value, f_scope);
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
-		error_handle("(");
+		error_handle_expected("(");
 	get_token(t);
 	function_arguments(scope, function);
 	if(tokens.top()->type != BRACKET_CLOSE)
-		error_handle(")");
+		error_handle_expected(")");
 	get_token(t);
 	g->main_decl(function);
 	block_commands(function->function_scope);
@@ -1111,5 +1115,5 @@ void lexer::program() {
 	program_parts(global_scope);
 	main_function(global_scope);
 	if(tokens.top()->type != END_OF_FILE)
-		error_handle("EOF");
+		error_handle_expected("end of file");
 }
