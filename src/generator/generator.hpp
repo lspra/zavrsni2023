@@ -59,6 +59,7 @@ public:
     generate_C(std::string name) : code_generator(name) {
         for_numbs = 0;
         file << "#include <stdio.h>\n";
+        file << "#include <stdlib.h>\n";
     }
     virtual void generate_undefined_exp(Var_object* var, Var_object* exp);
     virtual void generate_exp(Var_object* var, Var_object* exp);

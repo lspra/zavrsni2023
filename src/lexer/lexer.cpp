@@ -268,7 +268,7 @@ Variable* lexer::var_extend(Array_element* var, Scope* scope) {
 	return ar_el;
 }
 
-// <var> -> var <var_extend> <var>
+// <var> -> var <var_extend>
 // returns Variable/Function/Class pointer if this is already initialised varible/function
 // returns nullptr if varible/class/function is not initialised
 Var_object* lexer::var(Scope* scope, bool* Lvalue) {

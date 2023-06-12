@@ -6,6 +6,3 @@ all: $(o_files)
 	g++ $(CXXFLAGS) $(o_files) -o lsharp
 	
 $(o_files) : %.o: %.cpp
-
-clean:
-	del $(wildcard *.o)
