@@ -15,9 +15,7 @@ naredbe završavaju znakom `;`
 - stringovi su 
 
 #### polja
-`lana = bool[]` definira polje boolova
 `lana = int32[7]` definira polje intova veličine 7
-`lana = {1, 2, 3, 4}` definira polje intova veličine 4 s navedenim vrijednostima
 `lana = float[n]` definira polje floatova veličine n
 - indeksiranje od 0
 - moguce operacije `[2:3]`, `[0:7:2]` itd kao u pythonu
@@ -78,6 +76,10 @@ kada bi se sada program pokrenuo s argumentom `7`, tada bi na početku izvođenj
                 public_member1 = constructor_argument1;
             }
 
+            public_method1(y = uint8) {
+                private_member1 = y * 3.14;
+            }
+
             Lana()
             {
                 //second constructor
@@ -88,6 +90,7 @@ kada bi se sada program pokrenuo s argumentom `7`, tada bi na početku izvođenj
 #### stvaranje objekata
     lana_instance = Lana();
     lana_instance.public_member1 = 7;
+    lana_instance.public_method1(2);
 
 ### operatori
 

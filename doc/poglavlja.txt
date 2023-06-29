@@ -1,0 +1,41 @@
+1. Uvod
+- kratko o motivaciji, o sadržaju rada - oko pola stranice
+- kratki opis zadatka, motivacija, način rješavanja
+- pregled sadržaja ostatka rada
+
+2. Pravi uvod, s opisom područja istraživanja (Prevoditelji programskih jezika)
+- područja u kojima se javlja problem
+- način kako se rješavaju slični problemi 
+- karakteristike prevoditelja
+- karakteristike jezika
+- podaci iz literature
+
+3. Sintaksa jezika L#
+- sintaksna pravila
+- tokeni
+- gramatika jezika
+- zahtjevi sustava - prevodenje, javljanje ako je doslo do pogreške
+
+4. Opis rada prevoditelja
+- algoritmi rada
+- podjela na leksicki, sintaksni analizator i na sintezu
+- sto radi koji dio
+
+5. Prikaz ostvarena rješenja/sustava - u pseudokodu, algoritmi, kod, slike, rezultati, primjeri
+- razvojno okruženje
+- rezultati
+- kod prevoditelja
+
+6. upute za rad
+- primjeri ulaznih i izlaznih programa
+- način prevođenja i pokretanja
+
+7. Možda dodatna analiza, uočeni problemi, dodatne mogućnosti "nadogradnje", ...
+- analiza optimalnosti rješenja
+- dodatne mogućnosti koje bi se trebale implementirati
+
+8. Zaključak
+- procjena uspješnosti rješenja
+
+Literatura
+(+ sažetak na HR i EN za ZR/DR)
