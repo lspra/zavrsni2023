@@ -1,7 +1,7 @@
 \documentclass[times, utf8, zavrsni]{fer}
 \usepackage{booktabs}
 \graphicspath{ {./images/} }
-\setcitestyle{round}
+\setcitestyle{numbers,square,unsrt}
 
 \begin{document}
 
@@ -11,7 +11,7 @@
 
 \author{Lana Šprajc}
 
-\maketitle
+% \maketitle
 
 % Ispis stranice s napomenom o umetanju izvornika rada. Uklonite naredbu \izvornik ako želite izbaciti tu stranicu.
 %\izvornik
@@ -46,15 +46,15 @@ Svaki podatak spremljen u varijablu ima neki tip. Tipovi se dijeli na brojeve (c
 \subsection{Statički i dinamički tipizirani jezici}
 S obzirom na pristup varijablama, jezici mogu biti statičkih tipova (engl. \textit{staticly typed}) i dinamičkih tipova (engl. \textit{dinamicly typed}).
 Jezici statičkih tipova provjeravaju tip podatka tijekom kompilacije zbog čega se ne događaju pogreške prilikom izvođenja koda. U jezicima statičkih tipova, nije moguća promjena tipa 
-varijable kroz kod. Primjeri statičkih tipiziranih jezika su C, C++, Java\dots \citep{pythonplanet}
+varijable kroz kod \citep{pythonplanet}. Primjeri statičkih tipiziranih jezika su C, C++, Java\dots
 
-Jezici dinamičkih tipova provjeravaju tip tijekom izvođenja (\textit{runtime}). Ovo usporava rad prevedenog programa jer se tijekom izvođenja koda mora provoditi provjera tipova.
-Primjeri dinamički tipiziranih jezika su Python, Javascript\dots \citep{pythonplanet}
+Jezici dinamičkih tipova provjeravaju tip tijekom izvođenja (engl. \textit{runtime}). Ovo usporava rad prevedenog programa jer se tijekom izvođenja koda mora provoditi provjera tipova \citep{pythonplanet}.
+Primjeri dinamički tipiziranih jezika su Python, Javascript\dots
 
 \subsection{Slabo i jako tipizirani jezici}
 Jezici se dijele slabo tipizirane (engl. \textit{weakly typed}) i jako tipizirane (engl. \textit{strongly typed}). Iako ne postoji općeprihvaćena definicija, 
 najčešća interpretacija je da ovo označava u kojoj mjeri jezici podržavaju implicitne konverzije iz tipa u tip i operacije različitih tipova. Jezici koji podržavaju ovo nazivaju
-se slabo tipizirani, dok se jezici koji ne podržavaju zovu jako tipizirani. Važno je napomenuti da se radi o skali, a ne strogoj podjeli. Tako je primjerice Python jače tipizirani od JavaScripta. \citep{zolatypes}
+se slabo tipizirani, dok se jezici koji ne podržavaju zovu jako tipizirani. Važno je napomenuti da se radi o skali, a ne strogoj podjeli. Tako je primjerice Python jače tipizirani od JavaScripta \citep{zolatypes}. 
 
 \section{Naredbe}
 Naredbe su osnovni dio programskog koda. Osnovne naredba su naredbe deklaracije, naredbe pridruživanja, naredbe grananja, naredbe petlja i naredbe poziva funkcije.
@@ -66,7 +66,7 @@ pretpostavljene (engl. \textit{default}) vrijednosti (npr. Python), ali ovo nije
 
 \subsection{Preopterećene funkcije}
 Preopterećivanje funkcija (engl. \textit{function overload}) je stvaranje funkcija s jednakim imenom, a različitim argumentima. Argumenti se mogu razlikovati po tipovima
-ili po broju. Neki jezici koji ovo podržavaju su C++, Java, Julia, dok preopterećene funkcije nisu moguće u C-u, Pythonu\dots \citep{Kahanwal2014ComparativeSO} Većina dinamički tipiziranih jezika ne podržava
+ili po broju. Neki jezici koji ovo podržavaju su C++, Java, Julia \citep{Kahanwal2014ComparativeSO}, dok preopterećene funkcije nisu moguće u C-u, Pythonu\dots Većina dinamički tipiziranih jezika ne podržava
 preopterećene funkcije jer prilikom prevođenja koda nije poznata informacija o tipu argumenata pa prevoditelj ne može donijeti odluku o pozivu ispravne funkcije.
 
 \section{Klase}
@@ -80,10 +80,10 @@ sintaksna analiza, semantička analiza, generiranje ciljnog programa te optimiza
 
 \section{Kompajler i interpreter}
 Prevoditelji programskih jezika se dijele na kompajlere i interpretere. Kompajleri prije pokretanja programa prevedu i spreme sav kod, dok interpreteri 
-prevode kod za vrijeme izvršavanja programa. \citep{compilerint}
+prevode kod za vrijeme izvršavanja programa \citep{compilerint}. 
 
 \section{Leksička analiza}
-Leksička analiza čini prvi dio analize izvornog programa. Cilj leksičke analize je dobivanje niza tokena koji predstavljaju glavne dijelove programa. \citep{ppj}
+Leksička analiza čini prvi dio analize izvornog programa. Cilj leksičke analize je dobivanje niza tokena koji predstavljaju glavne dijelove programa \citep{ppj}. 
 
 \subsection{Token}
 Token predstavlja najmanju cjelinu u izvornom programu. Tokeni se dijele na ključne riječi, varijable, konstante, operatore i posebne znakove (npr. zagrade, točka zarez, zarez, dvotočka).
@@ -93,11 +93,11 @@ dati opširnija informacija o mjestu pogreške.
 \subsection{Način rada leksičkog analizatora}
 Leksički analizator (tokenizator, lekser) je konačni automat koji prolazi znak po znak kroz izvorni kod. Miče znakove praznine (engl. \textit{whitespace characters}) kao što su razmaci,
 tabulatori, i prelazi u različita stanja na temelju pročitanih znakova.
-Kada uđe u konačno stanje, npr. čitanjem praznine ili operatora, lekser generira token. \citep{ppj}
+Kada uđe u konačno stanje, npr. čitanjem praznine ili operatora, lekser generira token \citep{ppj}. 
 
 \section{Sintaksna analiza}
 Sintaksna analiza je središnji dio prevođenja programskog jezika. Za potrebe sintaksne analize gradi se gramatika jezika prema kojoj sintaksni analizator analizira (parsira) izvorni kod.
-Zadaci sintaksnog analizatora su provjera sintaksnih pravila, određivanje mjesta sintaksnih pogrešaka i gradnja sintaksnog stabla. \citep{ppj} Sintaksna analiza se dijeli na analizu od dna prema vrhu (engl. \textit{bottom up}) i od vrha prema dnu (engl. \textit{top down}). Tijekom sintaksne analize se također stvaraju zapisi o svakoj varijabli, funkciji, klasi \dots
+Zadaci sintaksnog analizatora su provjera sintaksnih pravila, određivanje mjesta sintaksnih pogrešaka i gradnja sintaksnog stabla \citep{ppj}.  Sintaksna analiza se dijeli na analizu od dna prema vrhu (engl. \textit{bottom up}) i od vrha prema dnu (engl. \textit{top down}). Tijekom sintaksne analize se također stvaraju zapisi o svakoj varijabli, funkciji, klasi \dots
 
 \subsection{Sintaksno stablo}
 \begin{figure}
@@ -125,21 +125,21 @@ Sintaksni analizator može graditi sintaksno stablo od vrha prema dnu ili od dna
 Gradnju stabla od vrha prema dnu, sintaksni analizator započinje u vršnom čvoru. U svakom koraku, na temelju 
 pročitanih tokena i čvora u kojem se nalazi, analizator ili stvara novi čvor niže razine i prelazi u njega ili završava čvor u kojem se nalazi
 i vraća se u roditeljski čvor. Sintaksni analizator može graditi stablo od vrha prema dnu na temelju S-gramatike,
-Q-gramatike i LL(1)-gramatike. \citep{ppj}
+Q-gramatike i LL(1)-gramatike \citep{ppj}. 
 
 \subsubsection{Gradnja stabla od dna prema vrhu}
 Prilikom gradnje stabla od dna vrema vrhu, sintaksni analizator čita token po token te ih pokušava spojiti u zajednički vršni čvor.
 Kada izgradi čvor pokušava taj čvor spojiti u viši čvor sa sljedećim tokenima ili čvorovima sve dok ne dođe do vrha stabla.
-Ovo je moguće pomoću tehnika pronađi-pomakni, pronađi-reduciraj, tehnikom prednosti operatora i pomoću LR parsiranja. \citep{ppj}
+Ovo je moguće pomoću tehnika pronađi-pomakni, pronađi-reduciraj, tehnikom prednosti operatora i pomoću LR parsiranja \citep{ppj}. 
 
 \section{Semantička analiza}
 Postupkom semantičke analize, čvorovima sintaksnog stabla se određuju semantička svojstva, pronalaze se semantičke pogreške
-te se semantička svojstva prosljeđuju \linebreak s čvora na čvor stabla. Semantička svojstva uključuju tip podatka, vrijednost izraza\dots \citep{ppj}
+te se semantička svojstva prosljeđuju \linebreak s čvora na čvor stabla \citep{ppj}. Semantička svojstva uključuju tip podatka, vrijednost izraza\dots
 
 \section{Generiranje koda}
 Na temelju prethodnih koraka, prevoditelj programskog jezika generira ciljni kod. U ovom trenutku prevoditelju je poznato
 kojeg su tipa sve varijable, njihova ime i početne vrijednosti (ako ih imaju), na kojem su mjestu sve naredbe, popis svih funkcija i naredba koje se trebaju izvršavati u njima \dots
-Iz ovih podataka, prevoditelj generira ekvivalentne izraze u ciljnom jeziku i time stvara ciljni program. \citep{ppj}
+Iz ovih podataka, prevoditelj generira ekvivalentne izraze u ciljnom jeziku i time stvara ciljni program \citep{ppj}. 
 
 \section{Optimizacija}
 U generiranom kodu mogu se pojaviti operacije koje samo usporavaju rad programa. Primjerice pridruživanje vrijednosti varijabli koja se nakon toga ne koristi
@@ -466,7 +466,7 @@ Gramatika jezika bitna je za gradnju prevoditelja jezika jer se pomoću nje grad
 \end{verbatim}
 
 Sva nezavršna stanja u nazivu imaju \verb|<>|. Početno stanje prilikom parsiranja je <program>. Produkcija \verb|<stanje> -> \$|
-označava epsilon produkciju. Epsilon produkcija je produkcija gramatike koja nezavršni znak pretvara u prazan završni znak. \citep{ppj}
+označava epsilon produkciju. Epsilon produkcija je produkcija gramatike koja nezavršni znak pretvara u prazan završni znak \citep{ppj}. 
 Stanja nazvana s velikim slovima (od A do K) služe postizanju ispravnog prioriteta 
 između operatorima.
 
@@ -734,7 +734,7 @@ definicije strukture. Dodatno, u ovom koraku se dodaje argument s pokazivačem n
 \chapter{Instalacija i pokretanje prevoditelja}
 \section{Opis repozitorija}
 Izvorni kod nalazi se u mapi \verb|src| koja se sastoji od datoteka \verb|main.cpp|, \verb|makefile| i tri mape, \verb|tokenizer|, \verb|lexer| i \verb|generator|.
-U datoteci \verb|main.cpp| nalai se funkcija \verb|main| u kojoj se inicijaliziraju i pokreću leksički, sintaksi i semantički analizatori i generator koda.
+U datoteci \verb|main.cpp| nalazi se funkcija \verb|main| u kojoj se inicijaliziraju i pokreću leksički, sintaksi i semantički analizatori i generator koda.
 U datoteci \verb|makefile| nalazi se skripta za prevođenje izvornog koda.
 
 U mapi \verb|tokenizer| nalazi se sav kod potreban za leksičku analizu. U datoteci \linebreak \verb|tokenizer.hpp| deklarirana je
@@ -757,8 +757,8 @@ u terminalu mape u kojoj se nalazi izvorni kod.
 
 Alternativno, može se pokrenuti i naredba:
 \begin{verbatim}
-g++ -std=23 main.cpp tokenizer/tokenizer.cpp 
-    lexer/lexer.cpp lexer/records.cpp 
+g++ -std=23 main.cpp tokenizer/tokenizer.cpp \
+    lexer/lexer.cpp lexer/records.cpp \
     generator/generator.cpp -o lsharp
 \end{verbatim}
 
@@ -927,6 +927,20 @@ Ovaj primjer prevodi se u:
         char aaa9;
         aaa9 = a8(&a13);
     }
+\end{verbatim}
+
+\section{Neispravan primjer}
+Primjer ulazne datoteke u kojoj se nalazi greška je:
+\begin{verbatim}
+    main() {
+        x = int8[32];
+        y = x + 8;
+    }
+\end{verbatim}
+Greška u ovom primjeru je što se pokušava zbrojiti polje sa brojem. Prevoditelj ne prevode ovaj program, 
+nego ispuje grešku
+\begin{verbatim}
+    operator defined only on numbers in line 3
 \end{verbatim}
 
 \chapter{Zaključak}

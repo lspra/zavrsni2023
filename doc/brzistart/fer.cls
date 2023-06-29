@@ -169,7 +169,8 @@
 
 % TOC
 \renewcommand\tableofcontents{%
-   \if@dodanazahvala\else \setcounter{page}{4} \fi
+\setcounter{tocdepth}{1}
+\if@dodanazahvala\else \setcounter{page}{4} \fi
    \if@radseminar \setcounter{page}{2} \fi
    \chapter*{\contentsname
    \@mkboth{%
