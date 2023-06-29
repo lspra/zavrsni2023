@@ -23,7 +23,6 @@ void get_token(tokenizer* t) {
 		Token* token = t->get_next_token();
 		tokens.push(token);
 	}
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 }
 
 void error_handle(std::string message) {
@@ -276,8 +275,6 @@ Variable* lexer::var_extend(Array_element* var, Scope* scope) {
 // returns Variable/Function/Class pointer if this is already initialised varible/function
 // returns nullptr if varible/class/function is not initialised
 Var_object* lexer::var(Scope* scope, bool* Lvalue) {
-	std::cout << "var"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
 		error_handle_expected("variable");
 	Variable * variable = find_var_all_scopes(scope);
@@ -307,8 +304,6 @@ Var_object* lexer::Lvalue(Scope* scope) {
 // <A> -> <Lvalue> = <exp>
 // <A> -> <Lvalue> | (<exp>) | const
 Var_object* lexer::A(Scope* scope) {
-	std::cout << "A"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type == VAR) {
 		bool lvalue = true;
 		Var_object* variable = var(scope, &lvalue);
@@ -344,8 +339,6 @@ Var_object* lexer::A(Scope* scope) {
 
 // <B> -> <A> | +<A> | -<A> | ~<A>
 Var_object* lexer::B(Scope* scope) {
-	std::cout << "B"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Token* operator_ = nullptr;
 	if(tokens.top()->value == "+" || tokens.top()->value == "-" || tokens.top()->value == "~") {
 		operator_ = tokens.top();
@@ -354,7 +347,7 @@ Var_object* lexer::B(Scope* scope) {
 	Var_object* a = A(scope);
 	if(operator_ != nullptr) {
 		if(!isnumber(a->get_type()) || (operator_->value == "~" && !isint(a->get_type())))
-			error_handle("operator not defined on not numbers");
+			error_handle("operator defined only on numbers");
 		Var_object* b = new Var_object("", a->type);
 		g->generate_exp(a, b, operator_);
 		return b;
@@ -364,15 +357,13 @@ Var_object* lexer::B(Scope* scope) {
 
 // <C> -> <B> << <C> | <B> >> <C> | <B>
 Var_object* lexer::C(Scope* scope) {
-	std::cout << "C"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* b = B(scope);
 	if(tokens.top()->value == "<<" || tokens.top()->value == ">>") {
 		Token* op = tokens.top();
 		get_token(t);
 		Var_object* b2 = B(scope);
 		if(!isint(b->get_type()) || !isint(b2->get_type()))
-			error_handle("operator not defined on not integers");
+			error_handle("operator defined only on integers");
 		Var_object* rez = convert(b, b2);
 		g->generate_exp(b, b2, rez, op);
 		b = rez;
@@ -382,15 +373,13 @@ Var_object* lexer::C(Scope* scope) {
 
 // <D> -> <C> & <D> | <C>
 Var_object* lexer::D(Scope* scope) {
-	std::cout << "D"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* c = C(scope);
 	while (tokens.top()->value == "&") {
 		Token* op = tokens.top();
 		get_token(t);
 		Var_object* c2 = C(scope);
 		if(!isint(c->get_type()) || !isint(c2->get_type()))
-			error_handle("operator not defined on not integers");
+			error_handle("operator defined only on integers");
 		Var_object* rez = convert(c, c2);
 		g->generate_exp(c, c2, rez, op);
 		c = rez;
@@ -400,15 +389,13 @@ Var_object* lexer::D(Scope* scope) {
 
 // <E> -> <D> '|' <E> | <D> ^ <E> | <D>
 Var_object* lexer::E(Scope* scope) {
-	std::cout << "E"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* d = D(scope);
 	while (tokens.top()->value == "|" || tokens.top()->value == "^") {
 		Token* op = tokens.top();
 		get_token(t);
 		Var_object* d2 = D(scope);
 		if(!isint(d->get_type()) || !isint(d2->get_type()))
-			error_handle("operator not defined on not integers");
+			error_handle("operator defined only on integers");
 		Var_object* rez = convert(d, d2);
 		g->generate_exp(d, d2, rez, op);
 		d = rez;
@@ -418,15 +405,13 @@ Var_object* lexer::E(Scope* scope) {
 
 // <F> -> <E> * <F> | <E> / <F> | <E> % <F> | <E>
 Var_object* lexer::F(Scope* scope) {
-	std::cout << "F"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* e = E(scope);
 	while (tokens.top()->value == "*" || tokens.top()->value == "/" || tokens.top()->value == "%") {
 		Token* op = tokens.top();
 		get_token(t);
 		Var_object* e2 = E(scope);
 		if(!isnumber(e->get_type()) || !isnumber(e2->get_type()))
-			error_handle("operator not defined on not integers");
+			error_handle("operator defined only on integers");
 		Var_object* rez = convert(e, e2);
 		g->generate_exp(e, e2, rez, op);
 		e = rez;
@@ -436,15 +421,13 @@ Var_object* lexer::F(Scope* scope) {
 
 // <G> -> <F> + <G> | <F> - <G> | <F>
 Var_object* lexer::G(Scope* scope) {
-	std::cout << "G"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* f = F(scope);
 	while (tokens.top()->value == "+" || tokens.top()->value == "-") {
 		Token* op = tokens.top();
 		get_token(t);
 		Var_object* f2 = F(scope);
 		if(!isnumber(f->get_type()) || !isnumber(f2->get_type()))
-			error_handle("operator not defined on not numbers");
+			error_handle("operator defined only on numbers");
 		Var_object* sum = convert(f, f2);
 		g->generate_exp(f, f2, sum, op);
 		f = sum;
@@ -456,15 +439,13 @@ Var_object* lexer::G(Scope* scope) {
 //    <Lvalue> operator_modify (<exp>) | (<exp>) operator_modify <Lvalue> |
 //    <Lvalue> operator_modify const | const operator_modify <Lvalue>  | <G>
 Var_object* lexer::H(Scope* scope) {
-	std::cout << "H"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	int stack_top = tokens.size();
 	if(tokens.top()->type == OPERATOR_MODIFY) {
 		Token* op = tokens.top();
 		get_token(t);
 		Var_object* variable = Lvalue(scope);
 		if(!isnumber(variable->get_type()))
-			error_handle("operator not defined on not numbers.");
+			error_handle("operator defined only on numbers.");
 		g->generateH(variable, op);
 		return variable;
 	}
@@ -497,7 +478,7 @@ Var_object* lexer::H(Scope* scope) {
 				H0_arguments.push(args);
 			}
 			if(!isnumber(variable->get_type()))
-				error_handle("operator not defined on not numbers.");
+				error_handle("operator defined only on numbers.");
 			return variable;
 		}
 		remove_stack_top(stack_top);
@@ -527,15 +508,13 @@ Var_object* lexer::H(Scope* scope) {
 	get_token(t);
 	Var_object* variable = Lvalue(scope);
 	if(!isnumber(variable->get_type()))
-		error_handle("operator not defined on not numbers.");
+		error_handle("operator defined only on numbers.");
 	g->generateH(variable, op_, expression);
 	return variable;
 }
 
 // <I> -> <H> == <H> | <H> != <H>| <H> < <H> | <H> <= <H> | <H> > <H> | <H> >= <H> | <H>
 Var_object* lexer::I(Scope* scope) {
-	std::cout << "I"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* h1 = H(scope);
 	if (tokens.top()->value == "==" || tokens.top()->value == "!=" || tokens.top()->value == "<" ||
 		 tokens.top()->value == "<=" || tokens.top()->value == ">" || tokens.top()->value == ">=") {
@@ -551,8 +530,6 @@ Var_object* lexer::I(Scope* scope) {
 
 // <J> -> not <I> | <I>
 Var_object* lexer::J(Scope* scope) {
-	std::cout << "J"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->value == "not") {
 		Token* op = tokens.top();
 		get_token(t);
@@ -566,8 +543,6 @@ Var_object* lexer::J(Scope* scope) {
 
 // <K> -> <J> and <K> | <J>
 Var_object* lexer::K(Scope* scope) {
-	std::cout << "K"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* j = J(scope);
 	while (tokens.top()->value == "and") {
 		Token* op = tokens.top();
@@ -582,8 +557,6 @@ Var_object* lexer::K(Scope* scope) {
 
 // <exp> -> <K> or <exp> | <K> xor <exp> | <K>
 Var_object* lexer::exp(Scope* scope) {
-	std::cout << "exp"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* k =	K(scope);
 	while (tokens.top()->value == "or" || tokens.top()->value == "xor") {
 		Token* op = tokens.top();
@@ -612,8 +585,6 @@ Var_object* lexer::exp(Scope* scope) {
 
 // <argument_list> -> <exp>, <argument_list> | <epx>
 std::vector<Var_object*> lexer::argument_list(Scope* scope, std::vector<Var_object*> *arguments_vector, size_t index) {
-	std::cout << "argument list"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* express = exp(scope);
 	if(!convertible(express, (*arguments_vector)[index]))
 		error_handle("wrong argument type");
@@ -633,8 +604,6 @@ std::vector<Var_object*> lexer::argument_list(Scope* scope, std::vector<Var_obje
 
 // <arguments> -> <argument_list> | $
 std::vector<Var_object*> lexer::arguments(Scope* scope, std::vector<Var_object*> *arguments_vector) {
-	std::cout << "arguments"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != BRACKET_CLOSE)
 		return argument_list(scope, arguments_vector, 0);
 	std::vector<Var_object*> b;
@@ -643,8 +612,6 @@ std::vector<Var_object*> lexer::arguments(Scope* scope, std::vector<Var_object*>
 
 // <decl_command> -> var = data_type
 Var_object* lexer::decl_command(Scope* scope, bool func_arg) {
-	std::cout << "decl command"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
 		return nullptr;
 	if(find_var(tokens.top(), scope->variables) != nullptr)
@@ -698,8 +665,6 @@ Var_object* lexer::decl_command(Scope* scope, bool func_arg) {
 
 // <if_command> -> if(<exp>) <block_commands> | if(<exp>) <block_commands> else <block_commands>
 void lexer::if_command(Scope* scope) {
-	std::cout << "if command"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	get_token(t);
 	Scope* if_scope = new Scope(scope);
 	if(tokens.top()->type != BRACKET_OPEN)
@@ -725,8 +690,6 @@ void lexer::if_command(Scope* scope) {
 // <for_command> -> for(<exp>; <exp>; <exp>) <block_commands>
 // <for_command> -> for(<decl_command>; <exp>; <exp>) <block_commands>
 void lexer::for_command(Scope* scope) {
-	std::cout << "for command"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Scope* for_scope = new Scope(scope);
 	for_scope->parent_scope = scope;
 	get_token(t);
@@ -765,8 +728,6 @@ void lexer::for_command(Scope* scope) {
 
 // <while_command> -> while(<exp>) <block_commands>
 void lexer::while_command(Scope* scope) {
-	std::cout << "while command"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Scope* while_scope = new Scope(scope);
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
@@ -786,8 +747,6 @@ void lexer::while_command(Scope* scope) {
 
 // <input_command> -> input(<Lvalue>)
 void lexer::input_command(Scope* scope) {
-	std::cout << "input command"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
 		error_handle_expected("(");
@@ -801,8 +760,6 @@ void lexer::input_command(Scope* scope) {
 
 // <print_command> -> print(<exp>)
 void lexer::print_command(Scope* scope) {
-	std::cout << "print command"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	get_token(t);
 	if(tokens.top()->type != BRACKET_OPEN)
 		error_handle_expected("(");
@@ -818,9 +775,7 @@ void lexer::print_command(Scope* scope) {
 void lexer::return_command(Scope* scope) {
 	if(curr_function == nullptr)
 		error_handle("return statement can only be used within function");
-	std::cout << "return command"  << std::endl;
 	get_token(t);
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type == SEMICOLON) {
 		if(curr_function->return_object != nullptr)
 			error_handle_expected("expression");
@@ -846,8 +801,6 @@ void lexer::loop_command() {
 // <command> -> <input_command>; | <print_command>;
 // <command> -> <exp>; | <return_command>; | <loop_command>;
 void lexer::command(Scope* scope) {
-	std::cout << "command"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->value == "if")
 		if_command(scope);
 	else if(tokens.top()->value == "for")
@@ -881,8 +834,6 @@ void lexer::command(Scope* scope) {
 
 // <commands> -> <command> <commands> | $
 void lexer::commands(Scope* scope) {
-	std::cout << "commands"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type == CURLY_CLOSE)
 		return;
 	command(scope);
@@ -891,8 +842,6 @@ void lexer::commands(Scope* scope) {
 
 // <block_commands> -> {<commands>} | <command>
 void lexer::block_commands(Scope* scope) {
-	std::cout << "block commands"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type == CURLY_OPEN) {
 		get_token(t);
 		commands(scope);
@@ -906,8 +855,6 @@ void lexer::block_commands(Scope* scope) {
 
 // <func_arguments_list> -> <decl_command>, <func_arguments_list> | <decl_command>
 void lexer::func_arguments_list(Scope* scope, Function* function) {
-	std::cout << "func arguments list"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Var_object* arg = decl_command(function->function_scope, true);
 	if(arg == nullptr)
 		error_handle_expected("argument");
@@ -920,8 +867,6 @@ void lexer::func_arguments_list(Scope* scope, Function* function) {
 
 // <function_arguments> -> <func_arguments_list> | $
 void lexer::function_arguments(Scope* scope, Function* function) {
-	std::cout << "function arguments" << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type == VAR) {
 		func_arguments_list(scope, function);
 	}
@@ -929,8 +874,6 @@ void lexer::function_arguments(Scope* scope, Function* function) {
 
 // <return_type> -> =data_type | $
 void lexer::return_type(Function* function) {
-	std::cout << "return type"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->value != "=")
 		return;
 	get_token(t);
@@ -942,8 +885,6 @@ void lexer::return_type(Function* function) {
 
 // <function> -> var (<function_arguments>) <return_type> <block_commands>
 void lexer::function(Scope* scope) {
-	std::cout << "function"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Variable* func = find_var(tokens.top(), scope->variables);
 	if(func != nullptr)
 		error_handle("variable with this name already defined");
@@ -976,8 +917,6 @@ void lexer::function(Scope* scope) {
 
 // <base_list> -> var, <base_list> | var
 void lexer::base_list(Scope* scope) {
-	std::cout << "base list"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
 		error_handle_expected("base class name");
 	get_token(t);
@@ -989,8 +928,6 @@ void lexer::base_list(Scope* scope) {
 
 // <base_classes> -> (<base_list>) | $
 void lexer::base_classes(Scope* scope) {
-	std::cout << "base classes"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type == CURLY_OPEN)
 		return;
 	if(tokens.top()->type != BRACKET_OPEN)
@@ -1003,8 +940,6 @@ void lexer::base_classes(Scope* scope) {
 
 // <visibility_specifier> -> public | private
 void visibility_specifier(tokenizer* t) {
-	std::cout << "visibility specifier"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->value != "private" && tokens.top()->value != "public")
 		error_handle_expected("visibility specifier");
 	get_token(t);
@@ -1015,16 +950,12 @@ void visibility_specifier(tokenizer* t) {
 
 // <visibility_block> -> <visibility_specifier> <program_parts>
 void lexer::visibility_block(Scope* scope) {
-	std::cout << "visibility block"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	visibility_specifier(t);
 	program_parts(scope);
 }
 
 // <class_body> -> <visibility_block> <class_body> | <visibility_block>
 void lexer::class_body(Scope* scope) {
-	std::cout << "class body"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	visibility_block(scope);
 	if(tokens.top()->type != CURLY_CLOSE)
 		class_body(scope);
@@ -1032,12 +963,10 @@ void lexer::class_body(Scope* scope) {
 
 // <class_decl> -> class var <base_classes> {<class_body>}
 void lexer::class_decl(Scope* scope) {
-	std::cout << "class decl"  << std::endl;
 	get_token(t);
 	if(inside_class)
 		error_handle("cannot have nested classes yet.");
 	inside_class = true;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->type != VAR)
 		error_handle_expected("class name");
 	Class *c = new Class(tokens.top()->value, new Scope(scope));
@@ -1062,8 +991,6 @@ void lexer::class_decl(Scope* scope) {
 // <program_parts> -> <class_decl> <program_parts> | <function> <program_parts>
 // <program_parts> -> <decl_command>; <program_parts> | $
 void lexer::program_parts(Scope* scope) {
-	std::cout << "program parts"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	if(tokens.top()->value == "class")
 		class_decl(scope);
 	else if(tokens.top()->type == VAR) {
@@ -1086,8 +1013,6 @@ void lexer::program_parts(Scope* scope) {
 
 // <main_function> -> main (<function_arguments>) <block_commands>
 void lexer::main_function(Scope* scope) {
-	std::cout << "main function"  << std::endl;
-	std::cout << tokens.top()->type << " " << tokens.top()->line << " " << tokens.top()->value << std::endl;
 	Scope* f_scope = new Scope(scope);
 	Function* function = new Function(tokens.top()->value, f_scope);
 	get_token(t);
@@ -1109,7 +1034,6 @@ void lexer::main_function(Scope* scope) {
 // after each function is executed, token that follows that function
 // is on the top of the tokens stack
 void lexer::program() {
-	std::cout << "program"  << std::endl;
 	global_scope = new Scope(nullptr);
 	get_token(t);
 	program_parts(global_scope);
